@@ -40,7 +40,6 @@ async function main() {
       plateNumber: 'กข 1234 สงขลา',
       brand: 'Toyota Hilux Revo (ตอนเดียว)',
       vehicleStatus: 'AVAILABLE',
-      workPlace: 'สาขาระโนด',
       qrCodeData: 'QR_REVO_1234',
     },
   })
@@ -52,7 +51,6 @@ async function main() {
       plateNumber: 'ขค 9876 กทม.',
       brand: 'Honda HR-V',
       vehicleStatus: 'AVAILABLE',
-      workPlace: 'สาขาระโนด',
       qrCodeData: 'QR_HRV_9876',
     },
   })

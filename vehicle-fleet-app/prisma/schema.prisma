@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// 1. ตารางพนักงาน (Employee)
+// ==========================================
+model Employee {
+  employeeId         String              @id
+  fullName           String
+  position           String
+  department         String
+  workPlace          String              @map("สถานที่ปฏิบัติงาน")
+  role               Role                @default(USER)
+  
+  // 🌟 บรรทัดนี้สำคัญมาก! ต้องมีเพื่อให้ระบบรู้ว่าพนักงานทำงานอยู่หรือลาออก
+  status             String              @default("ACTIVE") 
+
+  maintenanceTickets MaintenanceTicket[]
+  checkInOutLogs     CheckInOutLog[]
+  reservations       Reservation[]
+}
+
+// ==========================================
+// 2. ตารางรถยนต์ (Vehicle)
+// ==========================================
+model Vehicle {
+  vehicleId        String              @id @default(uuid())
+  plateNumber      String              @unique
+  brand            String
+  model            String?
+  year             String?
+  type             String?
+  department       String?
+  vehicleStatus    String              @default("AVAILABLE") // AVAILABLE, IN_USE, MAINTENANCE
+  qrCodeData       String              @unique
+  currentMileage   Int                 @default(0)
+
+  // 🌟 [ฟีเจอร์ใหม่ Phase 2]
+  isBookable       Boolean             @default(true) // เปิด/ปิด ให้จองล่วงหน้า
+  taxExpireDate    DateTime?           // วันหมดอายุภาษี
+  nextCheckDate    DateTime?           // วันครบกำหนดเช็คระยะ
+  nextCheckMileage Int?                // ไมล์ครบกำหนดเช็คระยะ
+
+  reservations       Reservation[]
+  maintenanceTickets MaintenanceTicket[]
+  checkInOutLogs     CheckInOutLog[]   // รองรับ Walk-in
+}
+
+// ==========================================
+// 3. ตารางการจอง (Reservation)
+// ==========================================
+model Reservation {
+  reservationId     String         @id @default(uuid())
+  employeeId        String
+  vehicleId         String
+  startDate         DateTime       @db.Date
+  startTime         String
+  endDate           DateTime       @db.Date
+  endTime           String
+  destination       String
+  purpose           String
+  reservationStatus ReserveStatus  @default(BOOKED)
+  
+  employee          Employee       @relation(fields: [employeeId], references: [employeeId])
+  vehicle           Vehicle        @relation(fields: [vehicleId], references: [vehicleId])
+  logs              CheckInOutLog?
+}
+
+// ==========================================
+// 4. ตารางบันทึกการรับ-คืนรถ (CheckInOutLog)
+// ==========================================
+model CheckInOutLog {
+  logId         String       @id @default(uuid())
+  
+  // 🌟 เปลี่ยนเป็น Optional (?) เพื่อให้รองรับ Walk-in โดยไม่มีใบจอง
+  reservationId String?      @unique
+  reservation   Reservation? @relation(fields: [reservationId], references: [reservationId])
+
+  // 🌟 เก็บข้อมูลพนักงานและรถยนต์ไว้ใน Log โดยตรง
+  vehicleId     String
+  vehicle       Vehicle      @relation(fields: [vehicleId], references: [vehicleId])
+  
+  employeeId    String
+  employee      Employee     @relation(fields: [employeeId], references: [employeeId])
+
+  checkInTime   DateTime     @default(now())
+  mileageOut    Int
+  photoOutUrl   String?
+
+  checkOutTime  DateTime?
+  mileageIn     Int?
+  photoInUrl    String?
+  remark        String?
+}
+
+// ==========================================
+// 5. ตารางแผนก (Department)
+// ==========================================
+model Department {
+  departmentCode String @id // รหัสแผนก (เช่น DEPT01)
+  departmentName String   // ชื่อแผนก
+}
+
+// ==========================================
+// 6. ตารางข้อมูลร้านค้า / อู่ซ่อม (Shop)
+// ==========================================
+model Shop {
+  shopId      String   @id @default(uuid())
+  shopName    String   @unique
+  address     String?
+  phone       String?
+  serviceType String?
+  note        String?
+
+  maintenanceTickets MaintenanceTicket[]
+}
+
+// ==========================================
+// 7. ตารางข้อมูลใบแจ้งซ่อม (Maintenance Ticket)
+// ==========================================
+model MaintenanceTicket {
+  ticketId           String   @id @default(uuid())
+  ticketNumber       String   @unique 
+  requestDate        DateTime @default(now()) 
+
+  vehicleId          String
+  vehicle            Vehicle  @relation(fields: [vehicleId], references: [vehicleId])
+
+  employeeId         String
+  employee           Employee @relation(fields: [employeeId], references: [employeeId])
+
+  shopId             String?
+  shop               Shop?    @relation(fields: [shopId], references: [shopId])
+
+  issueDesc          String   
+  mileage            Int      
+  status             String   @default("รอตรวจสอบ") 
+
+  // --- ข้อมูล Workflow ขั้นตอนการอนุมัติ ---
+  quoteDate          DateTime? 
+  managerApproveDate DateTime? 
+  principleDate      DateTime? 
+  prNo               String?   
+  prDate             DateTime? 
+  poNo               String?   
+  poDate             DateTime? 
+
+  // --- ข้อมูล Workflow การดำเนินการซ่อม ---
+  instructionDate    DateTime? 
+  entryDate          DateTime? 
+  partsReturnDate    DateTime? 
+  finishDate         DateTime? 
+  result             String?   
+
+  // --- ข้อมูล Workflow การเบิกจ่ายและปิดงาน ---
+  docReceiveDate     DateTime? 
+  sendFinanceDate    DateTime? 
+  voucherDate        DateTime? 
+  cost               Float?    
+  adminNote          String?   
+}
+
+// ==========================================
+// Enums (สถานะคงที่ต่างๆ)
+// ==========================================
+enum Role {
+  USER
+  FLEET_ADMIN
+  SYSTEM_ADMIN
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  IN_USE
+  MAINTENANCE
+}
+
+enum ReserveStatus {
+  BOOKED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+}

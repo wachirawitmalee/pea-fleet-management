@@ -99,8 +99,16 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const reservationId = searchParams.get('id');
+
+    // 🌟 เพิ่มเงื่อนไขเช็ค null ตรงนี้ TypeScript จะเข้าใจทันที
+    if (!reservationId) {
+      return NextResponse.json({ error: 'ไม่พบรหัสการจอง' }, { status: 400 });
+    }
+
+    // ตอนนี้ TypeScript รู้แล้วว่า reservationId ต้องเป็น string แน่นอน
     await prisma.checkInOutLog.deleteMany({ where: { reservationId } });
     await prisma.reservation.delete({ where: { reservationId } });
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'ไม่สามารถลบรายการจองนี้ได้' }, { status: 500 });

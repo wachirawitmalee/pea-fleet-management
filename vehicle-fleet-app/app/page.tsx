@@ -5,6 +5,9 @@ import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
+// 🌟 1. Import Helper Functions มาใช้งาน
+import { showLoading, showSuccess, showError } from '@/lib/alert';
+
 export default function Home() {
   const [stats, setStats] = useState({
     totalVehicles: 0, availableVehicles: 0, inUseVehicles: 0, totalReservations: 0,
@@ -31,6 +34,7 @@ export default function Home() {
     const reservationId = b.reservationId;
     const mileageOut = b.checkInOutLog ? b.checkInOutLog.mileageOut : 0;
 
+    // 🌟 ป๊อบอัพกรอกข้อมูล ยังใช้ของเดิมที่คุณออกแบบไว้ เพราะมี Custom HTML
     const { value: formValues } = await Swal.fire({
       title: `<span style="color: ${type === 'IN' ? '#059669' : '#e11d48'}; font-weight: 800; font-size: 1.5rem;">${type === 'IN' ? '🟢 รับรถ (Check-in)' : '🔴 คืนรถ (Check-out)'}</span>`,
       html: `
@@ -72,10 +76,27 @@ export default function Home() {
     });
 
     if (formValues) {
-      const res = await fetch('/api/check-in-out', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reservationId, type, ...formValues }) });
-      if (res.ok) {
-        Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', showConfirmButton: false, timer: 1500, customClass: { popup: 'rounded-[2rem]' } });
-        fetchDashboardData(); 
+      // 🌟 2. แสดง Loading Spinner ดักไว้ตอนยิง API
+      showLoading('กำลังบันทึกข้อมูล...', 'กรุณารอสักครู่ ระบบกำลังอัปเดตข้อมูล');
+
+      try {
+        const res = await fetch('/api/check-in-out', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ reservationId, type, ...formValues }) 
+        });
+        
+        if (res.ok) {
+          // 🌟 3. แสดงป๊อบอัพสำเร็จด้วย Helper Function
+          await showSuccess('บันทึกสำเร็จ!');
+          fetchDashboardData(); 
+        } else {
+          const data = await res.json();
+          // 🌟 4. ดักจับ Error หากบันทึกไม่ผ่าน
+          showError('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถทำรายการได้');
+        }
+      } catch (error) {
+        showError('ระบบขัดข้อง', 'ไม่สามารถติดต่อฐานข้อมูลได้');
       }
     }
   };

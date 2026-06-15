@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 
+// 🌟 1. Import Helper Functions มาใช้งาน
+import { showLoading, showSuccess, showError } from '@/lib/alert';
+
 export default function MaintenanceManagementPage() {
   const [tickets, setTickets] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -55,20 +58,46 @@ export default function MaintenanceManagementPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 🌟 2. เรียก Loading Spinner ทันทีที่กดปุ่มบันทึก
+    showLoading('กำลังบันทึกข้อมูล...', 'กรุณารอสักครู่ ระบบกำลังอัปเดตใบแจ้งซ่อม');
+
     try {
       const res = await fetch('/api/maintenance', { 
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ ticketId: currentTicket.ticketId, vehicleId: currentTicket.vehicleId, ...formData }) 
       });
-      if (res.ok) { Swal.fire({ icon: 'success', title: 'บันทึกเรียบร้อย', showConfirmButton: false, timer: 1500 }); setIsModalOpen(false); fetchData(); }
-    } catch (error) { Swal.fire({ icon: 'error', title: 'เชื่อมต่อล้มเหลว' }); }
+      if (res.ok) { 
+        await showSuccess('บันทึกเรียบร้อย'); 
+        setIsModalOpen(false); 
+        fetchData(); 
+      } else {
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้');
+      }
+    } catch (error) { 
+      showError('เชื่อมต่อล้มเหลว', 'เกิดปัญหาในการเชื่อมต่อเซิร์ฟเวอร์'); 
+    }
   };
 
   const handleDelete = async (id: string, vehicleId: string) => {
+    // ใช้ Swal แบบเดิมเพื่อถามยืนยันก่อนลบ
     const confirm = await Swal.fire({ title: 'ลบใบแจ้งซ่อม?', icon: 'warning', showCancelButton: true, confirmButtonText: 'ลบเลย', confirmButtonColor: '#ef4444' });
     if (confirm.isConfirmed) {
-      const res = await fetch(`/api/maintenance?id=${id}&vId=${vehicleId}`, { method: 'DELETE' });
-      if (res.ok) { Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', showConfirmButton: false, timer: 1500 }); fetchData(); }
+      
+      // 🌟 3. เรียก Loading Spinner ระหว่างรอลบข้อมูล
+      showLoading('กำลังลบข้อมูล...', 'กรุณารอสักครู่');
+
+      try {
+        const res = await fetch(`/api/maintenance?id=${id}&vId=${vehicleId}`, { method: 'DELETE' });
+        if (res.ok) { 
+          await showSuccess('ลบสำเร็จ'); 
+          fetchData(); 
+        } else {
+          showError('เกิดข้อผิดพลาด', 'ไม่สามารถลบข้อมูลได้');
+        }
+      } catch (error) {
+        showError('เชื่อมต่อล้มเหลว', 'เกิดปัญหาในการเชื่อมต่อเซิร์ฟเวอร์');
+      }
     }
   };
 

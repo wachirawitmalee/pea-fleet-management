@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 
+// 🌟 1. Import Helper Functions มาใช้งาน
+import { showLoading, showSuccess, showError } from '@/lib/alert';
+
 export default function DepartmentManagementPage() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,12 +56,15 @@ export default function DepartmentManagementPage() {
     
     // 🌟 เช็คแค่ชื่อแผนกอย่างเดียว เพราะรหัสให้ระบบเจนให้
     if (!departmentName) {
-      Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบถ้วน', text: 'กรุณากรอกชื่อแผนกครับ', confirmButtonColor: '#9333ea', customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl px-8 py-3 font-bold text-md' } });
+      showError('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อแผนกครับ');
       return;
     }
 
     const deptData = { departmentCode, departmentName };
     const method = isEditMode ? 'PUT' : 'POST';
+
+    // 🌟 2. เรียก Loading Spinner ทันทีที่กดปุ่มบันทึก
+    showLoading('กำลังบันทึกข้อมูล...', 'กรุณารอสักครู่ ระบบกำลังอัปเดตข้อมูลแผนก');
 
     try {
       const res = await fetch('/api/departments', {
@@ -69,18 +75,20 @@ export default function DepartmentManagementPage() {
       const result = await res.json();
 
       if (res.ok) {
-        Swal.fire({ icon: 'success', title: 'บันทึกข้อมูลสำเร็จ!', showConfirmButton: false, timer: 1500, customClass: { popup: 'rounded-[2rem]' } });
+        // 🌟 3. เรียกป๊อบอัพสำเร็จ
+        await showSuccess('บันทึกข้อมูลสำเร็จ!');
         setIsModalOpen(false);
         fetchDepartments();
       } else {
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: result.error, confirmButtonColor: '#9333ea', customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl px-8 py-3 font-bold text-md' } });
+        showError('เกิดข้อผิดพลาด', result.error || 'ไม่สามารถบันทึกได้');
       }
     } catch (e) {
-      Swal.fire({ icon: 'error', title: 'เชื่อมต่อล้มเหลว', text: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้', confirmButtonColor: '#9333ea', customClass: { popup: 'rounded-[2rem]', confirmButton: 'rounded-xl px-8 py-3 font-bold text-md' } });
+      showError('เชื่อมต่อล้มเหลว', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
     }
   };
 
   const handleDelete = async (code: string, name: string) => {
+    // ตรงนี้ยังคงใช้ Swal.fire แบบเดิมเพราะต้องมีปุ่มให้กด ยกเลิก/ตกลง
     const confirm = await Swal.fire({
       title: 'ยืนยันการลบแผนก?',
       text: `คุณต้องการลบแผนก "${name}" ใช่หรือไม่?`,
@@ -94,17 +102,21 @@ export default function DepartmentManagementPage() {
     });
 
     if (confirm.isConfirmed) {
+      // 🌟 4. เรียก Loading Spinner หลังจากกดยืนยัน
+      showLoading('กำลังลบข้อมูล...', 'กรุณารอสักครู่ครับ');
+
       try {
         const res = await fetch(`/api/departments?id=${code}`, { method: 'DELETE' });
         const result = await res.json();
+        
         if (res.ok) {
-          Swal.fire({ icon: 'success', title: 'ลบแผนกเรียบร้อย', showConfirmButton: false, timer: 1500, customClass: { popup: 'rounded-[2rem]' } });
+          await showSuccess('ลบแผนกเรียบร้อย');
           fetchDepartments();
         } else {
-          Swal.fire({ icon: 'error', title: 'ไม่สามารถลบได้', text: result.error, confirmButtonColor: '#9333ea', customClass: { popup: 'rounded-[2rem]' } });
+          showError('ไม่สามารถลบได้', result.error || 'เกิดข้อผิดพลาดในการลบ');
         }
       } catch (e) {
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด' });
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
       }
     }
   };

@@ -5,6 +5,9 @@ import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { useRouter } from 'next/navigation';
 
+// 🌟 1. Import Helper Functions มาใช้งาน
+import { showLoading, showSuccess, showError } from '@/lib/alert';
+
 export default function ReservationPage() {
   const router = useRouter();
 
@@ -54,13 +57,8 @@ export default function ReservationPage() {
         // ถ้าระบุชัดเจนว่า INACTIVE ให้บล็อก
         if (found.status === 'INACTIVE') {
           setFullName('');
-          Swal.fire({
-            icon: 'error',
-            title: 'รหัสพนักงานถูกระงับ',
-            text: 'พนักงานรหัสนี้พ้นสภาพการทำงานหรือย้ายสังกัดแล้ว ไม่สามารถจองรถได้ครับ',
-            confirmButtonColor: '#1e293b',
-            customClass: { popup: 'rounded-[2rem]' }
-          });
+          // 🌟 2. ใช้ Helper Function แสดง Error
+          showError('รหัสพนักงานถูกระงับ', 'พนักงานรหัสนี้พ้นสภาพการทำงานหรือย้ายสังกัดแล้ว ไม่สามารถจองรถได้ครับ');
         } else {
           // ถ้าเป็น ACTIVE หรือข้อมูลเก่าที่ยังไม่มี status ให้ดึงชื่อมาแสดงปกติ
           setFullName(found.fullName);
@@ -94,7 +92,9 @@ export default function ReservationPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!employeeId || !fullName || !vehicleId || !startDate || !startTime || !endDate || !endTime || !destination) {
-      Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณากรอกข้อมูลให้ครบถ้วน', customClass: { popup: 'rounded-[2rem]' } }); return;
+      // 🌟 3. ใช้ Helper Function
+      showError('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลให้ครบถ้วน'); 
+      return;
     }
 
     const bookingStartDateTime = new Date(`${startDate}T${startTime}`);
@@ -102,11 +102,16 @@ export default function ReservationPage() {
     const cancelThreshold = new Date(bookingStartDateTime.getTime() + 60 * 60 * 1000); 
 
     if (now > cancelThreshold) {
-      Swal.fire({ icon: 'error', title: 'เวลาจองไม่ถูกต้อง', text: 'คุณกำลังจองคิวย้อนหลังเกิน 1 ชั่วโมง (ระบบจะลบทิ้งอัตโนมัติ) กรุณาเปลี่ยนเวลาครับ', customClass: { popup: 'rounded-[2rem]' } }); return;
+      showError('เวลาจองไม่ถูกต้อง', 'คุณกำลังจองคิวย้อนหลังเกิน 1 ชั่วโมง (ระบบจะลบทิ้งอัตโนมัติ) กรุณาเปลี่ยนเวลาครับ'); 
+      return;
     }
     if (!isVehicleAvailable(vehicleId)) {
-      Swal.fire({ icon: 'error', title: 'ไม่สามารถจองได้', text: 'รถยนต์คันนี้ถูกจองไปแล้วในช่วงเวลาดังกล่าว', customClass: { popup: 'rounded-[2rem]' } }); return;
+      showError('ไม่สามารถจองได้', 'รถยนต์คันนี้ถูกจองไปแล้วในช่วงเวลาดังกล่าว'); 
+      return;
     }
+
+    // 🌟 4. เรียก Loading ก่อนยิง API
+    showLoading('กำลังบันทึกการจอง...', 'กรุณารอสักครู่ ระบบกำลังจองคิวรถให้ท่าน');
 
     try {
       const res = await fetch('/api/reservations', {
@@ -115,14 +120,15 @@ export default function ReservationPage() {
       });
       
       if (res.ok) {
-        await Swal.fire({ icon: 'success', title: 'จองคิวรถสำเร็จ!', text: 'กำลังพาท่านไปยังหน้าตารางการใช้งาน...', showConfirmButton: false, timer: 2000, customClass: { popup: 'rounded-[2rem]' } });
+        // 🌟 5. แจ้งเตือนสำเร็จและพากลับหน้าตาราง
+        await showSuccess('จองคิวรถสำเร็จ!', 'กำลังพาท่านไปยังหน้าตารางการใช้งาน...');
         router.push('/schedule');
       } else {
         const data = await res.json();
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: data.error, customClass: { popup: 'rounded-[2rem]' } });
+        showError('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถบันทึกข้อมูลได้');
       }
     } catch (e) {
-      Swal.fire({ icon: 'error', title: 'การเชื่อมต่อล้มเหลว', customClass: { popup: 'rounded-[2rem]' } });
+      showError('การเชื่อมต่อล้มเหลว', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้');
     }
   };
 

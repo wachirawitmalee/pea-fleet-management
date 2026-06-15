@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+// 🌟 1. Import Helper Function มาใช้งาน (ใช้แค่ showError สำหรับดักจับปัญหาการดึงข้อมูล)
+import { showError } from '@/lib/alert';
+
 export default function AdminReservationsPage() {
   const [reservations, setReservations] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState(''); // 🌟 เพิ่ม State การค้นหา
@@ -19,9 +22,13 @@ export default function AdminReservationsPage() {
       const res = await fetch('/api/reservations', { cache: 'no-store' });
       if (res.ok) {
         setReservations(await res.json());
+      } else {
+        // 🌟 2. ดัก Error กรณี API ตอบกลับมาว่าไม่สำเร็จ
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลการจองได้');
       }
     } catch (e) {
-      console.error(e);
+      // 🌟 3. ดัก Error กรณีเชื่อมต่อเซิร์ฟเวอร์ไม่ได้
+      showError('การเชื่อมต่อล้มเหลว', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsLoading(false);
     }

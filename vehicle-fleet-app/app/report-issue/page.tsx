@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
 
+// 🌟 1. Import Helper Functions มาใช้งาน
+import { showLoading, showError } from '@/lib/alert';
+
 export default function ReportIssuePage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -45,7 +48,7 @@ export default function ReportIssuePage() {
     }
   };
 
-  // 🌟 [แก้ไขใหม่] ดึงชื่อพนักงานอัตโนมัติ 6-7 หลัก พร้อมระบบบล็อกรหัสพนักงานที่ถูกระงับสิทธิ์ (INACTIVE)
+  // 🌟 ดึงชื่อพนักงานอัตโนมัติ 6-7 หลัก พร้อมระบบบล็อกรหัสพนักงานที่ถูกระงับสิทธิ์ (INACTIVE)
   useEffect(() => {
     if (employeeId.length >= 6) {
       const found = employees.find(e => e.employeeId === employeeId);
@@ -54,13 +57,8 @@ export default function ReportIssuePage() {
         // ตรวจสอบสถานะว่าพนักงานคนนี้พ้นสภาพ หรือลาออก/ย้ายไปแล้วหรือไม่
         if (found.status === 'INACTIVE') {
           setFullName('');
-          Swal.fire({
-            icon: 'error',
-            title: 'รหัสพนักงานถูกระงับสิทธิ์',
-            text: 'พนักงานรหัสนี้พ้นสภาพการทำงานหรือย้ายสังกัดแล้ว ไม่สามารถแจ้งซ่อมยานพาหนะได้ครับ',
-            confirmButtonColor: '#1e293b',
-            customClass: { popup: 'rounded-[2rem]' }
-          });
+          // 🌟 2. ใช้ Helper Function แจ้ง Error
+          showError('รหัสพนักงานถูกระงับสิทธิ์', 'พนักงานรหัสนี้พ้นสภาพการทำงานหรือย้ายสังกัดแล้ว ไม่สามารถแจ้งซ่อมยานพาหนะได้ครับ');
         } else {
           // ถ้าเป็นสถานะ ACTIVE ดึงชื่อมาแสดงปกติ
           setFullName(found.fullName);
@@ -79,11 +77,15 @@ export default function ReportIssuePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!employeeId || !fullName || !vehicleId || !mileage || !issueDesc) {
-      Swal.fire({ icon: 'warning', title: 'ข้อมูลไม่ครบ', text: 'กรุณากรอกข้อมูลให้ครบทุกช่อง (*)', customClass: { popup: 'rounded-[2rem]' } });
+      // 🌟 3. ใช้ Helper Function แจ้ง Error ข้อมูลไม่ครบ
+      showError('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลให้ครบทุกช่อง (*)');
       return;
     }
 
     setIsSubmitting(true);
+    
+    // 🌟 4. เรียก Loading Spinner ทันทีที่กดปุ่มแจ้งซ่อม
+    showLoading('กำลังส่งข้อมูล...', 'ระบบกำลังบันทึกใบแจ้งซ่อมและล็อกสถานะรถ');
 
     try {
       const res = await fetch('/api/maintenance', {
@@ -100,6 +102,7 @@ export default function ReportIssuePage() {
         setMileage('');
         setIssueDesc('');
 
+        // 🌟 5. คง Custom Swal ของเดิมไว้ เพราะมีปุ่ม "พิมพ์ใบแจ้งซ่อม" ที่ออกแบบไว้เฉพาะหน้านี้
         Swal.fire({ 
           title: 'ส่งเรื่องแจ้งซ่อมสำเร็จ!', 
           html: `
@@ -121,10 +124,12 @@ export default function ReportIssuePage() {
         
       } else {
         const data = await res.json();
-        Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: data.error, customClass: { popup: 'rounded-[2rem]' } });
+        // 🌟 6. ใช้ Helper Function แสดง Error จาก API
+        showError('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถบันทึกข้อมูลได้');
       }
     } catch (e) {
-      Swal.fire({ icon: 'error', title: 'เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว', customClass: { popup: 'rounded-[2rem]' } });
+      // 🌟 7. ใช้ Helper Function แสดง Error เชื่อมต่อ
+      showError('เชื่อมต่อเซิร์ฟเวอร์ล้มเหลว', 'กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsSubmitting(false);
     }

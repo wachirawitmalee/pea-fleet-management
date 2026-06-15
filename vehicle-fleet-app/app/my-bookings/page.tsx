@@ -5,6 +5,9 @@ import Link from 'next/link';
 import Swal from 'sweetalert2';
 import { Scanner } from '@yudiel/react-qr-scanner';
 
+// 🌟 1. Import Helper Functions มาใช้งาน
+import { showLoading, showSuccess, showError } from '@/lib/alert';
+
 export default function MyBookingsPage() {
   const [qrCode, setQrCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,7 +32,8 @@ export default function MyBookingsPage() {
       const targetVehicle = vehicles.find((v: any) => v.qrCodeData === codeToSearch);
 
       if (!targetVehicle) {
-        Swal.fire({ icon: 'error', title: 'ไม่พบรถยนต์', text: 'รหัส QR Code นี้ไม่ตรงกับรถในระบบ', confirmButtonColor: '#9333ea', customClass: { popup: 'rounded-[2rem]' } });
+        // 🌟 เปลี่ยนมาใช้ showError
+        showError('ไม่พบรถยนต์', 'รหัส QR Code นี้ไม่ตรงกับรถในระบบ');
         setScannedVehicle(null); setVehicleBookings([]); setActiveWalkInLog(null);
         setLoading(false); return;
       }
@@ -57,7 +61,7 @@ export default function MyBookingsPage() {
       }
 
     } catch (e) {
-      Swal.fire({ icon: 'error', title: 'ดึงข้อมูลไม่สำเร็จ', customClass: { popup: 'rounded-[2rem]' } });
+      showError('ดึงข้อมูลไม่สำเร็จ', 'ไม่สามารถติดต่อฐานข้อมูลได้');
     } finally {
       setLoading(false);
     }
@@ -144,26 +148,44 @@ export default function MyBookingsPage() {
     });
 
     if (formValues) {
-      const res = await fetch('/api/check-in-out', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          reservationId, 
-          vehicleId: vId, 
-          employeeId: formValues.employeeId, 
-          type, 
-          mileage: formValues.mileage, 
-          photoUrl: formValues.photoUrl, 
-          remark: formValues.remark 
-        })
-      });
 
-      if (res.ok) {
-        Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', showConfirmButton: false, timer: 1500, customClass: { popup: 'rounded-[2rem]' } });
-        handleScanQR(qrCode); // ดึงข้อมูลมาอัปเดตหน้าจอทันที
-      } else {
-        const data = await res.json();
-        Swal.fire({ icon: 'error', title: 'ข้อผิดพลาด', text: data.error, customClass: { popup: 'rounded-[2rem]' } });
+      // 🌟 2. ใช้ Helper Function แสดง Loading
+      showLoading('กำลังบันทึกข้อมูล...', 'กรุณารอสักครู่ ระบบกำลังอัปเดตข้อมูล');
+
+      try {
+        const res = await fetch('/api/check-in-out', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            reservationId, 
+            vehicleId: vId, 
+            employeeId: formValues.employeeId, 
+            type, 
+            mileage: formValues.mileage, 
+            photoUrl: formValues.photoUrl, 
+            remark: formValues.remark 
+          })
+        });
+
+        if (res.ok) {
+          // 🌟 3. ใช้ Helper Function โชว์ป๊อบอัพสำเร็จ
+          await showSuccess('บันทึกสำเร็จ!');
+          
+          // 🔥 จุดที่แก้ไข: ลบ handleScanQR ออก แล้วทำการล้างหน้าจอแทน
+          // วิธีนี้จะทำให้หน้ารับ-คืนรถกลับไปเป็นหน้าว่างๆ พร้อมสแกนคันต่อไป โดยไม่มีอะไรเด้งมากวนใจครับ
+          setScannedVehicle(null);
+          setQrCode('');
+          setVehicleBookings([]);
+          setActiveWalkInLog(null);
+          setIsCameraOpen(false);
+
+        } else {
+          const data = await res.json();
+          // 🌟 4. ใช้ Helper Function แสดง Error จาก API
+          showError('ข้อผิดพลาด', data.error || 'ไม่สามารถทำรายการได้');
+        }
+      } catch (error) {
+        showError('ระบบขัดข้อง', 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้');
       }
     }
   };

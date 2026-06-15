@@ -8,6 +8,9 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import Swal from 'sweetalert2';
 
+// 🌟 1. Import Helper Function เฉพาะตัวที่ต้องใช้ (showError)
+import { showError } from '@/lib/alert';
+
 export default function ScheduleCalendarPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,12 +49,8 @@ export default function ScheduleCalendarPage() {
         throw new Error('ไม่สามารถโหลดข้อมูลได้');
       }
     } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'โหลดข้อมูลล้มเหลว',
-        text: 'ไม่สามารถดึงตารางการจองรถได้ กรุณาลองใหม่อีกครั้ง',
-        confirmButtonColor: '#9333ea'
-      });
+      // 🌟 2. เปลี่ยนมาใช้ Helper Function สำหรับแจ้ง Error เพื่อให้โค้ดสั้นและคุมโทนเดียวกัน
+      showError('โหลดข้อมูลล้มเหลว', 'ไม่สามารถดึงตารางการจองรถได้ กรุณาลองใหม่อีกครั้ง');
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +59,7 @@ export default function ScheduleCalendarPage() {
   const handleEventClick = (clickInfo: any) => {
     const event = clickInfo.event;
     
+    // 🌟 3. ตรงนี้ยังคงใช้ Swal.fire แบบเดิม เพราะมีการจัด Layout HTML ที่สวยงามเฉพาะเจาะจงอยู่แล้วครับ
     Swal.fire({
       title: '<span style="color: #4c1d95; font-weight: 800; font-size: 1.4rem;">🚙 รายละเอียดการใช้รถ</span>',
       html: `

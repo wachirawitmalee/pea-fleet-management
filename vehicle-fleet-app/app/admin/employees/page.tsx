@@ -5,6 +5,9 @@ import Link from 'next/link';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 
+// 🌟 1. Import Helper Functions ที่เราสร้างไว้มาใช้งาน
+import { showLoading, showSuccess, showError } from '@/lib/alert';
+
 export default function AdminEmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,37 +65,41 @@ export default function AdminEmployeesPage() {
     setSingleFormData({ ...singleFormData, [e.target.name]: e.target.value });
   };
 
-const handleSingleSave = async (e: React.FormEvent) => {
+  const handleSingleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!singleFormData.employeeId || !singleFormData.fullName || !singleFormData.position || !singleFormData.department) {
-      Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลพนักงานให้ครบถ้วนครับ', 'warning');
+      showError('ข้อมูลไม่ครบ', 'กรุณากรอกข้อมูลพนักงานให้ครบถ้วนครับ');
       return;
     }
+
+    // 🌟 2. เรียก Loading Spinner ทันทีที่กดปุ่มบันทึก
+    showLoading('กำลังบันทึกข้อมูล...', 'กรุณารอสักครู่ ระบบกำลังอัปเดตข้อมูลพนักงาน');
 
     try {
       const method = isEditingSingle ? 'PUT' : 'POST';
       const res = await fetch('/api/employees', {
         method,
         headers: { 'Content-Type': 'application/json' },
-        // 🌟 ส่งข้อมูลครบถ้วนรวมถึง status
         body: JSON.stringify(singleFormData) 
       });
 
       if (res.ok) {
-        Swal.fire({ icon: 'success', title: 'บันทึกข้อมูลสำเร็จ', showConfirmButton: false, timer: 1500 });
+        // 🌟 3. เรียกป๊อบอัพสำเร็จ
+        await showSuccess('บันทึกข้อมูลสำเร็จ');
         setIsSingleModalOpen(false);
         fetchData(); // โหลดข้อมูลใหม่
       } else {
         const data = await res.json();
         // 🌟 โชว์ Error ที่ส่งมาจาก API จริงๆ
-        Swal.fire('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถบันทึกได้', 'error');
+        showError('เกิดข้อผิดพลาด', data.error || 'ไม่สามารถบันทึกได้');
       }
     } catch (error) {
-      Swal.fire('ข้อผิดพลาด', 'เกิดปัญหาการเชื่อมต่อเซิร์ฟเวอร์', 'error');
+      showError('ข้อผิดพลาด', 'เกิดปัญหาการเชื่อมต่อเซิร์ฟเวอร์');
     }
   };
 
   const handleSoftDelete = async (id: string, name: string) => {
+    // ตรงนี้ยังคงใช้ Swal.fire แบบเดิมเพราะต้องมีปุ่มให้กด ยกเลิก/ตกลง
     const conf = await Swal.fire({
       title: 'ระงับสิทธิ์พนักงาน?',
       text: `ต้องการปรับสถานะ คุณ ${name} เป็นพนักงานลาออก/ย้าย หรือไม่? (ประวัติในระบบจะไม่สูญหาย)`,
@@ -105,13 +112,20 @@ const handleSingleSave = async (e: React.FormEvent) => {
     });
 
     if (conf.isConfirmed) {
+      // 🌟 4. เรียก Loading Spinner หลังจากกดยืนยัน
+      showLoading('กำลังอัปเดตสถานะ...', 'กรุณารอสักครู่ครับ');
+
       try {
         const res = await fetch(`/api/employees?id=${id}`, { method: 'DELETE' });
         if (res.ok) {
-          Swal.fire({ icon: 'success', title: 'เปลี่ยนสถานะเรียบร้อย', showConfirmButton: false, timer: 1500 });
+          await showSuccess('เปลี่ยนสถานะเรียบร้อย');
           fetchData();
+        } else {
+          showError('เกิดข้อผิดพลาด', 'ไม่สามารถระงับสิทธิ์ได้');
         }
-      } catch (error) { Swal.fire('ข้อผิดพลาด', 'เกิดปัญหาเชื่อมต่อเซิร์ฟเวอร์', 'error'); }
+      } catch (error) { 
+        showError('ข้อผิดพลาด', 'เกิดปัญหาเชื่อมต่อเซิร์ฟเวอร์'); 
+      }
     }
   };
 
@@ -140,7 +154,7 @@ const handleSingleSave = async (e: React.FormEvent) => {
         setPreviewData(mappedData);
         setIsPreviewModalOpen(true);
       } else {
-        Swal.fire('ไม่พบข้อมูล', 'ไม่พบข้อมูลที่ตรงกับคอลัมน์ รหัส หรือ ชื่อ - สกุล ในไฟล์ Excel', 'warning');
+        showError('ไม่พบข้อมูล', 'ไม่พบข้อมูลที่ตรงกับคอลัมน์ รหัส หรือ ชื่อ - สกุล ในไฟล์ Excel');
       }
     };
     reader.readAsBinaryString(file);
@@ -160,19 +174,29 @@ const handleSingleSave = async (e: React.FormEvent) => {
 
   const handleConfirmImport = async () => {
     setIsSavingBulk(true);
+
+    // 🌟 5. เรียก Loading Spinner สำหรับการบันทึกจำนวนมาก
+    showLoading('กำลังนำเข้าข้อมูล...', `กำลังอัปเดตข้อมูลพนักงานทั้งหมด ${previewData.length} รายการ`);
+
     try {
       const res = await fetch('/api/employees/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ employees: previewData })
       });
+      
       if (res.ok) {
-        Swal.fire({ icon: 'success', title: 'อัปเดตพนักงานสำเร็จ', timer: 2000, showConfirmButton: false });
+        await showSuccess('อัปเดตพนักงานสำเร็จ');
         setIsPreviewModalOpen(false);
         fetchData();
+      } else {
+        showError('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลแบบกลุ่มได้');
       }
-    } catch (error) { Swal.fire('ข้อผิดพลาด', 'เกิดปัญหาการเชื่อมต่อเซิร์ฟเวอร์', 'error'); } 
-    finally { setIsSavingBulk(false); }
+    } catch (error) { 
+      showError('ข้อผิดพลาด', 'เกิดปัญหาการเชื่อมต่อเซิร์ฟเวอร์'); 
+    } finally { 
+      setIsSavingBulk(false); 
+    }
   };
 
   const filteredEmployees = employees.filter(emp => 

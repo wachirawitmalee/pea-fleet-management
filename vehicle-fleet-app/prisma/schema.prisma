@@ -46,7 +46,7 @@ model Vehicle {
   taxExpireDate    DateTime?           // วันหมดอายุภาษี
   nextCheckDate    DateTime?           // วันครบกำหนดเช็คระยะ
   nextCheckMileage Int?                // ไมล์ครบกำหนดเช็คระยะ
-
+  fuelRecords FuelRecord[] // เพิ่มบรรทัดนี้เข้าไป
   reservations       Reservation[]
   maintenanceTickets MaintenanceTicket[]
   checkInOutLogs     CheckInOutLog[]   // รองรับ Walk-in
@@ -186,4 +186,35 @@ enum ReserveStatus {
   CHECKED_IN
   COMPLETED
   CANCELLED
+}
+model FuelRecord {
+  id              String   @id @default(uuid())
+  date            DateTime // วันที่เติม
+  vehicleId       String
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [vehicleId], onDelete: Cascade)
+  mileage         Int      // เลขไมล์
+  
+  // ใบสั่งจ่ายน้ำมัน
+  voucherVolume   String?  // เล่มที่
+  voucherNumber   String?  // เลขที่
+  voucherDate     DateTime? // สั่งจ่าย ณ วันที่
+  stationName     String?  // สถานที่เติมน้ำมัน
+
+  // รายการติดตามน้ำมัน
+  fuelType        String   // ประเภทน้ำมัน
+  quantity        Float    // จำนวนลิตร
+  pricePerLiter   Float    // ราคาต่อลิตร
+  totalAmount     Float    // จำนวนเงินรวม
+  netAmount       Float    // มูลค่าสินค้าก่อนภาษี
+  vatAmount       Float    // ภาษีมูลค่าเพิ่ม
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SystemSetting {
+  id              String   @id @default("1")
+  alertEmail      String?  // อีเมลสำหรับรับการแจ้งเตือน
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

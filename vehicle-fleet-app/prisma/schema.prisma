@@ -187,6 +187,7 @@ enum ReserveStatus {
   COMPLETED
   CANCELLED
 }
+
 model FuelRecord {
   id              String   @id @default(uuid())
   date            DateTime // วันที่เติม

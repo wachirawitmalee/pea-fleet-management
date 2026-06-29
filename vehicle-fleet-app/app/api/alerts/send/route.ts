@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import nodemailer from 'nodemailer';
 
-// บังคับไม่ให้จำค่าแคช เพื่อให้คำนวณวันหมดอายุใหม่เสมอ
+// บังคับไม่ให้จำค่าแคช เพื่อให้ดึงข้อมูลใหม่แบบ Real-time ทุกครั้งที่รัน
 export const dynamic = 'force-dynamic';
 
 const prisma = new PrismaClient();
 
-export async function POST(request: Request) {
+// 🌟 ย้ายโค้ดการทำงานหลักมาไว้ในฟังก์ชันกลาง เพื่อให้ทั้ง GET และ POST เรียกใช้ร่วมกันได้
+async function sendAlertsHandler() {
   try {
     // 1. ดึงอีเมลปลายทางจากระบบตั้งค่า
     const setting = await prisma.systemSetting.findUnique({
@@ -28,10 +29,7 @@ export async function POST(request: Request) {
     const alertsList: any[] = [];
 
     vehicles.forEach((vehicle: any) => {
-      // ==========================================
-      // 🔴 1. ตรวจสอบวันหมดอายุภาษี
-      // (ดักจับทุกชื่อฟิลด์ที่เป็นไปได้ในฐานข้อมูลของคุณ)
-      // ==========================================
+      // ตรวจสอบวันหมดอายุภาษี
       const taxDateValue = vehicle.taxExpireDate || vehicle.taxExpiryDate || vehicle.taxDate || vehicle.registrationExpireDate;
       
       if (taxDateValue) {
@@ -47,9 +45,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // ==========================================
-      // 🔴 2. ตรวจสอบเช็คระยะแบบ "จำนวนวัน"
-      // ==========================================
+      // ตรวจสอบเช็คระยะแบบ "จำนวนวัน"
       const serviceDateValue = vehicle.nextServiceDate || vehicle.serviceDueDate || vehicle.maintenanceDate;
       let serviceAlertTriggered = false;
 
@@ -68,9 +64,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // ==========================================
-      // 🔴 3. ตรวจสอบเช็คระยะแบบ "เลขไมล์" (ถ้าไม่ได้เตือนแบบวันไปแล้ว)
-      // ==========================================
+      // ตรวจสอบเช็คระยะแบบ "เลขไมล์" (ถ้าไม่ได้เตือนแบบวันไปแล้ว)
       if (!serviceAlertTriggered && vehicle.currentMileage && vehicle.nextServiceMileage) {
         if (vehicle.currentMileage >= vehicle.nextServiceMileage - 1000) {
           const diff = vehicle.nextServiceMileage - vehicle.currentMileage;
@@ -83,7 +77,7 @@ export async function POST(request: Request) {
       }
     });
 
-    // 🌟 ถ้าไม่มีข้อมูลที่เข้าเกณฑ์เลย ค่อยส่งสถานะปกติ
+    // ถ้าไม่มีข้อมูลที่เข้าเกณฑ์เลย ค่อยส่งสถานะปกติ
     if (alertsList.length === 0) {
       return NextResponse.json({ message: 'ยานพาหนะทุกคันอยู่ในสถานะปกติ ไม่จำเป็นต้องส่งอีเมล' });
     }
@@ -99,7 +93,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // 4. สร้างเนื้อหาอีเมลในรูปแบบ HTML (รวมใส่ตารางเดียวให้สวยงามและอ่านง่าย)
+    // 4. สร้างเนื้อหาอีเมลในรูปแบบ HTML
     let htmlContent = `
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #334155; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px;">
         <div style="background: #1e293b; padding: 20px; border-radius: 12px; text-align: center; color: #ffffff;">
@@ -145,4 +139,14 @@ export async function POST(request: Request) {
   } catch (error: any) {
     return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการส่งอีเมล: ' + error.message }, { status: 500 });
   }
+}
+
+// 🌟 เปิดรองรับคำสั่งแบบ GET (สำหรับ Vercel Cron Jobs อัตโนมัติ)
+export async function GET() {
+  return sendAlertsHandler();
+}
+
+// 🌟 เปิดรองรับคำสั่งแบบ POST (สำหรับปุ่มกดทดสอบมือที่หน้าเว็บ)
+export async function POST() {
+  return sendAlertsHandler();
 }

@@ -108,7 +108,7 @@ export async function GET(request: Request) {
       success: true,
       ticketNumber: ticket.ticketNumber,
       plateNumber: ticket.vehicle.plateNumber,
-      remark: ticket.remark,
+      remark: ticket.adminNote, // 🟢 แก้ไขตรงนี้: จับคู่ตัวแปรให้ตรงกับฐานข้อมูล
       totalDays,
       events,
       adminNote: ticket.adminNote

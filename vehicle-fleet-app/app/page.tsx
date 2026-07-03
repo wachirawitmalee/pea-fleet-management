@@ -121,7 +121,7 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10 sm:mt-16 relative z-10">
         
         <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-800 mb-4 tracking-tight">ระบบบริหารจัดการรถยนต์</h1>
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-800 mb-4 tracking-tight">ระบบบริหารจัดการยานพาหนะ</h1>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto">จองรถล่วงหน้า ตรวจสอบคิว และสแกนรับ-คืนรถยนต์อย่างเป็นระบบ</p>
         </div>
 

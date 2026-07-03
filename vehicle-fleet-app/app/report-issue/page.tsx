@@ -194,21 +194,29 @@ export default function ReportIssuePage() {
             <div className="bg-slate-50 p-6 rounded-2xl border border-slate-300 shadow-sm">
               <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="text-xl">🚙</span> รถยนต์ที่พบปัญหา <span className="text-red-500 text-sm">*</span></h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {vehicles.map((v) => {
-                  const isMaintenance = v.vehicleStatus === 'MAINTENANCE';
-                  return (
-                    <label key={v.vehicleId} className={`relative flex items-center p-4 border-2 rounded-2xl transition-all duration-200 ${isMaintenance ? 'bg-slate-100 border-slate-200 opacity-60 cursor-not-allowed' : vehicleId === v.vehicleId ? 'border-red-500 bg-red-50 shadow-md cursor-pointer' : 'border-slate-300 hover:border-red-300 bg-white cursor-pointer'}`}>
-                      <input type="radio" name="vehicle" value={v.vehicleId} disabled={isMaintenance} checked={vehicleId === v.vehicleId} onChange={() => setVehicleId(v.vehicleId)} className="hidden" />
-                      <div className="flex flex-col flex-1 min-w-0 pr-2">
-                        <span className="font-extrabold text-slate-900 text-lg truncate">{v.plateNumber}</span>
-                        <span className="text-xs text-slate-600 font-bold truncate">{v.brand}</span>
-                      </div>
-                      <div className="ml-auto flex-shrink-0">
-                        {isMaintenance ? (<span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200 whitespace-nowrap">🛠️ ส่งซ่อมอยู่</span>) : (<span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 whitespace-nowrap">เลือกรถคันนี้</span>)}
-                      </div>
-                    </label>
-                  )
-                })}
+          {/* 🟢 โค้ดชุดใหม่: ปลดล็อกให้เลือกรถได้ทุกคัน พร้อมโชว์ป้ายกำกับว่าคันไหนส่งซ่อมอยู่ */}
+{vehicles.map((v) => {
+  const isMaintenance = v.vehicleStatus === 'MAINTENANCE'; // ยังเก็บไว้เผื่อโชว์ป้ายว่าซ่อมอยู่เฉยๆ
+  return (
+    <label key={v.vehicleId} className={`relative flex items-center p-4 border-2 rounded-2xl transition-all duration-200 ${vehicleId === v.vehicleId ? 'border-red-500 bg-red-50 shadow-md cursor-pointer' : 'border-slate-300 hover:border-red-300 bg-white cursor-pointer'}`}>
+      {/* 🟢 เอา disabled={isMaintenance} ออกไปแล้ว ทำให้กดเลือกได้ */}
+      <input type="radio" name="vehicle" value={v.vehicleId} checked={vehicleId === v.vehicleId} onChange={() => setVehicleId(v.vehicleId)} className="hidden" />
+      
+      <div className="flex flex-col flex-1 min-w-0 pr-2">
+        <span className="font-extrabold text-slate-900 text-lg truncate">{v.plateNumber}</span>
+        <span className="text-xs text-slate-600 font-bold truncate">{v.brand}</span>
+      </div>
+      <div className="ml-auto flex-shrink-0">
+        {/* 🟢 ยังโชว์ป้ายเตือนว่าซ่อมอยู่ แต่ User ก็ยังกดเลือกได้อยู่ดี */}
+        {isMaintenance ? (
+          <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg border border-amber-200 whitespace-nowrap">🛠️ มีคิวซ่อมอยู่</span>
+        ) : (
+          <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 whitespace-nowrap">เลือกรถคันนี้</span>
+        )}
+      </div>
+    </label>
+  )
+})}
               </div>
             </div>
 
@@ -270,18 +278,32 @@ export default function ReportIssuePage() {
         )}
 
       </main>
-
-      {/* MODAL: แสดงผล Timeline */}
+{/* MODAL: แสดงผล Timeline */}
       {isTimelineOpen && timelineData && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-[2rem] border border-slate-300 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-100">
+            
+            {/* Header */}
+            <div className="flex justify-between items-center p-6 border-b border-slate-200 bg-slate-50">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-800">ไทม์ไลน์งานซ่อม</h3>
                 <p className="text-sm font-bold text-red-600 mt-1">เลขที่: {timelineData.ticketNumber} | ทะเบียน: {timelineData.plateNumber}</p>
               </div>
               <button onClick={() => setIsTimelineOpen(false)} className="w-10 h-10 bg-white border border-slate-300 rounded-full font-bold text-slate-700 hover:bg-red-100">✕</button>
             </div>
+
+            {/* 🟢 กล่องข้อความหมายเหตุจากแอดมิน */}
+            {timelineData.remark && (
+              <div className="mx-6 mt-4 p-4 bg-amber-50/80 border border-amber-200 rounded-2xl flex items-start gap-3 shadow-sm">
+                <span className="text-lg">💬</span>
+                <div>
+                  <p className="text-xs font-black text-amber-800 uppercase tracking-wider">หมายเหตุจากผู้ดูแลระบบ</p>
+                  <p className="text-sm font-bold text-slate-700 mt-0.5">{timelineData.remark}</p>
+                </div>
+              </div>
+            )}
+
+            {/* ส่วนไทม์ไลน์เหตุการณ์ */}
             <div className="p-6 overflow-y-auto bg-white flex-1">
               <div className="text-center mb-6"><span className="inline-block px-4 py-2 bg-slate-100 text-slate-800 font-extrabold rounded-full text-sm border border-slate-300">เวลาที่ใช้ไปทั้งหมด: <span className="text-red-600">{timelineData.totalDays} วัน</span></span></div>
               <div className="relative border-l-4 border-slate-200 ml-6 space-y-8 py-2">
@@ -296,6 +318,7 @@ export default function ReportIssuePage() {
                 ))}
               </div>
             </div>
+
           </div>
         </div>
       )}

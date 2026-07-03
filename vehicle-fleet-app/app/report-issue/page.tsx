@@ -193,30 +193,44 @@ export default function ReportIssuePage() {
 
             <div className="bg-slate-50 p-6 rounded-2xl border border-slate-300 shadow-sm">
               <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="text-xl">🚙</span> รถยนต์ที่พบปัญหา <span className="text-red-500 text-sm">*</span></h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* 🟢 โค้ดชุดใหม่: ปลดล็อกให้เลือกรถได้ทุกคัน พร้อมโชว์ป้ายกำกับว่าคันไหนส่งซ่อมอยู่ */}
-{vehicles.map((v) => {
-  const isMaintenance = v.vehicleStatus === 'MAINTENANCE'; // ยังเก็บไว้เผื่อโชว์ป้ายว่าซ่อมอยู่เฉยๆ
-  return (
-    <label key={v.vehicleId} className={`relative flex items-center p-4 border-2 rounded-2xl transition-all duration-200 ${vehicleId === v.vehicleId ? 'border-red-500 bg-red-50 shadow-md cursor-pointer' : 'border-slate-300 hover:border-red-300 bg-white cursor-pointer'}`}>
-      {/* 🟢 เอา disabled={isMaintenance} ออกไปแล้ว ทำให้กดเลือกได้ */}
-      <input type="radio" name="vehicle" value={v.vehicleId} checked={vehicleId === v.vehicleId} onChange={() => setVehicleId(v.vehicleId)} className="hidden" />
-      
-      <div className="flex flex-col flex-1 min-w-0 pr-2">
-        <span className="font-extrabold text-slate-900 text-lg truncate">{v.plateNumber}</span>
-        <span className="text-xs text-slate-600 font-bold truncate">{v.brand}</span>
-      </div>
-      <div className="ml-auto flex-shrink-0">
-        {/* 🟢 ยังโชว์ป้ายเตือนว่าซ่อมอยู่ แต่ User ก็ยังกดเลือกได้อยู่ดี */}
-        {isMaintenance ? (
-          <span className="px-2.5 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-lg border border-amber-200 whitespace-nowrap">🛠️ มีคิวซ่อมอยู่</span>
-        ) : (
-          <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 whitespace-nowrap">เลือกรถคันนี้</span>
-        )}
-      </div>
-    </label>
-  )
-})}
+   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {vehicles.map((v) => {
+                  const isMaintenance = v.vehicleStatus === 'MAINTENANCE';
+                  return (
+                    <label 
+                      key={v.vehicleId} 
+                      /* 🟢 แก้ไข 1: เอาพื้นหลังสีเทา (bg-slate-100) และ cursor-not-allowed ออก เพื่อให้ทุกคันคลิกได้เหมือนกัน */
+                      className={`relative flex items-center p-4 border-2 rounded-2xl transition-all duration-200 cursor-pointer ${
+                        vehicleId === v.vehicleId 
+                          ? 'border-red-500 bg-red-50 shadow-md' 
+                          : 'border-slate-300 hover:border-red-300 bg-white'
+                      }`}
+                    >
+                      {/* 🟢 แก้ไข 2: เอาคำว่า disabled={isMaintenance} ออกจาก input แล้ว */}
+                      <input 
+                        type="radio" 
+                        name="vehicle" 
+                        value={v.vehicleId} 
+                        checked={vehicleId === v.vehicleId} 
+                        onChange={() => setVehicleId(v.vehicleId)} 
+                        className="hidden" 
+                      />
+                      
+                      <div className="flex flex-col flex-1 min-w-0 pr-2">
+                        <span className="font-extrabold text-slate-900 text-lg truncate">{v.plateNumber}</span>
+                        <span className="text-xs text-slate-600 font-bold truncate">{v.brand}</span>
+                      </div>
+                      
+                      <div className="ml-auto flex-shrink-0">
+                        {isMaintenance ? (
+                          <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200 whitespace-nowrap">🛠️ ส่งซ่อมอยู่</span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 whitespace-nowrap">เลือกรถคันนี้</span>
+                        )}
+                      </div>
+                    </label>
+                  )
+                })}
               </div>
             </div>
 

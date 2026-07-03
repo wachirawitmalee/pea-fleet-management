@@ -3,8 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
-
-// 🌟 1. Import Helper Functions มาใช้งาน
 import { showLoading, showSuccess, showError } from '@/lib/alert';
 
 export default function MaintenanceManagementPage() {
@@ -18,7 +16,6 @@ export default function MaintenanceManagementPage() {
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [timelineData, setTimelineData] = useState<any>(null);
 
-  // 🌟 เพิ่ม shopName ลงไป
   const [formData, setFormData] = useState({
     status: '', shopName: '', quoteDate: '', managerApproveDate: '', principleDate: '',
     prNo: '', prDate: '', poNo: '', poDate: '', instructionDate: '', partsReturnDate: '',
@@ -33,7 +30,11 @@ export default function MaintenanceManagementPage() {
     try {
       const res = await fetch('/api/maintenance', { cache: 'no-store' });
       if (res.ok) setTickets(await res.json());
-    } catch (error) { console.error(error); } finally { setIsLoading(false); }
+    } catch (error) { 
+      console.error(error); 
+    } finally { 
+      setIsLoading(false); 
+    }
   };
 
   const formatDateForInput = (isoString: string | null) => isoString ? new Date(isoString).toISOString().split('T')[0] : '';
@@ -42,14 +43,24 @@ export default function MaintenanceManagementPage() {
     setCurrentTicket(ticket);
     setFormData({
       status: ticket.status || 'รอตรวจสอบ', 
-      shopName: ticket.shop?.shopName || '', // 🌟 ดึงชื่อร้านมาแสดงในช่องพิมพ์
-      quoteDate: formatDateForInput(ticket.quoteDate), managerApproveDate: formatDateForInput(ticket.managerApproveDate), 
-      principleDate: formatDateForInput(ticket.principleDate), prNo: ticket.prNo || '', prDate: formatDateForInput(ticket.prDate), 
-      poNo: ticket.poNo || '', poDate: formatDateForInput(ticket.poDate), instructionDate: formatDateForInput(ticket.instructionDate), 
-      partsReturnDate: formatDateForInput(ticket.partsReturnDate), entryDate: formatDateForInput(ticket.entryDate), 
-      finishDate: formatDateForInput(ticket.finishDate), docReceiveDate: formatDateForInput(ticket.docReceiveDate), 
-      sendFinanceDate: formatDateForInput(ticket.sendFinanceDate), voucherDate: formatDateForInput(ticket.voucherDate), 
-      cost: ticket.cost ? ticket.cost.toString() : '', result: ticket.result || '', adminNote: ticket.adminNote || ''
+      shopName: ticket.shop?.shopName || '',
+      quoteDate: formatDateForInput(ticket.quoteDate), 
+      managerApproveDate: formatDateForInput(ticket.managerApproveDate), 
+      principleDate: formatDateForInput(ticket.principleDate), 
+      prNo: ticket.prNo || '', 
+      prDate: formatDateForInput(ticket.prDate), 
+      poNo: ticket.poNo || '', 
+      poDate: formatDateForInput(ticket.poDate), 
+      instructionDate: formatDateForInput(ticket.instructionDate), 
+      partsReturnDate: formatDateForInput(ticket.partsReturnDate), 
+      entryDate: formatDateForInput(ticket.entryDate), 
+      finishDate: formatDateForInput(ticket.finishDate), 
+      docReceiveDate: formatDateForInput(ticket.docReceiveDate), 
+      sendFinanceDate: formatDateForInput(ticket.sendFinanceDate), 
+      voucherDate: formatDateForInput(ticket.voucherDate), 
+      cost: ticket.cost ? ticket.cost.toString() : '', 
+      result: ticket.result || '', 
+      adminNote: ticket.adminNote || ''
     });
     setIsModalOpen(true);
   };
@@ -58,8 +69,6 @@ export default function MaintenanceManagementPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // 🌟 2. เรียก Loading Spinner ทันทีที่กดปุ่มบันทึก
     showLoading('กำลังบันทึกข้อมูล...', 'กรุณารอสักครู่ ระบบกำลังอัปเดตใบแจ้งซ่อม');
 
     try {
@@ -80,13 +89,9 @@ export default function MaintenanceManagementPage() {
   };
 
   const handleDelete = async (id: string, vehicleId: string) => {
-    // ใช้ Swal แบบเดิมเพื่อถามยืนยันก่อนลบ
     const confirm = await Swal.fire({ title: 'ลบใบแจ้งซ่อม?', icon: 'warning', showCancelButton: true, confirmButtonText: 'ลบเลย', confirmButtonColor: '#ef4444' });
     if (confirm.isConfirmed) {
-      
-      // 🌟 3. เรียก Loading Spinner ระหว่างรอลบข้อมูล
       showLoading('กำลังลบข้อมูล...', 'กรุณารอสักครู่');
-
       try {
         const res = await fetch(`/api/maintenance?id=${id}&vId=${vehicleId}`, { method: 'DELETE' });
         if (res.ok) { 
@@ -104,8 +109,13 @@ export default function MaintenanceManagementPage() {
   const handleOpenTimeline = async (ticketId: string) => {
     try {
       const res = await fetch(`/api/maintenance/timeline?id=${ticketId}`);
-      if (res.ok) { setTimelineData(await res.json()); setIsTimelineOpen(true); }
-    } catch (error) { console.error(error); }
+      if (res.ok) { 
+        setTimelineData(await res.json()); 
+        setIsTimelineOpen(true); 
+      }
+    } catch (error) { 
+      console.error(error); 
+    }
   };
 
   const filteredTickets = tickets.filter(t => {
@@ -121,13 +131,20 @@ export default function MaintenanceManagementPage() {
     <div className="min-h-screen bg-slate-50 pb-12 font-sans relative">
       <nav className="bg-slate-900 text-white sticky top-0 z-50 shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3"><Link href="/admin" className="text-slate-400 hover:text-white font-bold text-sm">← กลับแดชบอร์ด</Link><span className="text-slate-600">|</span><h1 className="text-md font-bold text-red-400">จัดการใบแจ้งซ่อม</h1></div>
+          <div className="flex items-center gap-3">
+            <Link href="/admin" className="text-slate-400 hover:text-white font-bold text-sm">← กลับแดชบอร์ด</Link>
+            <span className="text-slate-600">|</span>
+            <h1 className="text-md font-bold text-red-400">จัดการใบแจ้งซ่อม</h1>
+          </div>
         </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-6">
         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-300 flex items-center gap-3"><span className="text-slate-400 pl-2">🔍</span><input type="text" placeholder="ค้นหาด้วยเลขที่ใบซ่อม, ทะเบียนรถ..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full text-slate-900 font-bold bg-transparent outline-none" /></div>
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-300 flex items-center gap-3">
+            <span className="text-slate-400 pl-2">🔍</span>
+            <input type="text" placeholder="ค้นหาด้วยเลขที่ใบซ่อม, ทะเบียนรถ..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full text-slate-900 font-bold bg-transparent outline-none" />
+          </div>
           <div className="flex flex-wrap gap-2 pt-1">
             {[{ code: 'ALL', label: '🗂️ ทั้งหมด' }, { code: 'PENDING', label: '⏳ ดำเนินการ' }, { code: 'COMPLETED', label: '🏁 ปิดงาน' }, { code: 'CANCELLED', label: '❌ ยกเลิก' }].map(tab => (
               <button key={tab.code} onClick={() => setStatusFilter(tab.code)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${statusFilter === tab.code ? 'bg-red-600 text-white' : 'bg-slate-200 text-slate-800 hover:bg-slate-300'}`}>{tab.label}</button>
@@ -136,35 +153,65 @@ export default function MaintenanceManagementPage() {
         </div>
 
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-          {isLoading ? (<div className="p-12 text-center text-red-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</div>) : (
+          {isLoading ? (
+            <div className="p-12 text-center text-red-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</div>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-  <tr className="bg-slate-100 border-b border-slate-200 text-left">
-    <th className="p-4 font-bold text-slate-800 text-sm">เลขที่ใบซ่อม</th>
-    <th className="p-4 font-bold text-slate-800 text-sm">รถยนต์</th>
-    <th className="p-4 font-bold text-slate-800 text-sm">รายการซ่อม</th> {/* 🟢 เพิ่มหัวข้อนี้เข้าไป */}
-    <th className="p-4 font-bold text-slate-800 text-sm">ผู้แจ้ง</th>
-    <th className="p-4 font-bold text-slate-800 text-sm">สถานะ</th>
-    <th className="p-4 font-bold text-slate-800 text-sm text-center">จัดการ</th>
-  </tr>
-</thead>
+                  <tr className="bg-slate-100 border-b border-slate-200 text-left">
+                    <th className="p-4 font-bold text-slate-800 text-sm whitespace-nowrap">เลขที่ใบซ่อม</th>
+                    <th className="p-4 font-bold text-slate-800 text-sm whitespace-nowrap">รถยนต์</th>
+                    <th className="p-4 font-bold text-slate-800 text-sm min-w-[200px]">รายการซ่อม</th>
+                    <th className="p-4 font-bold text-slate-800 text-sm whitespace-nowrap">ผู้แจ้ง</th>
+                    <th className="p-4 font-bold text-slate-800 text-sm whitespace-nowrap">สถานะ</th>
+                    <th className="p-4 font-bold text-slate-800 text-sm text-center whitespace-nowrap">จัดการ</th>
+                  </tr>
+                </thead>
                 <tbody className="divide-y divide-slate-200">
                   {filteredTickets.map(t => (
                     <tr key={t.ticketId} className="hover:bg-slate-50 transition-colors">
                       <td className="p-4 font-mono font-extrabold text-red-700">{t.ticketNumber}</td>
-                      <td className="p-4"><p className="font-extrabold text-slate-900">{t.vehicle.plateNumber}</p><p className="text-xs text-slate-500 font-bold">{t.vehicle.brand}</p></td>
-                      <td className="p-4"><p className="text-sm text-slate-700">{t.issueDesc}</p></td> {/* 🟢 ข้อมูลรายการซ่อม (อยู่ช่องที่ 3) */}
-                      <td className="p-4 font-bold text-slate-800">{t.employee.fullName}</td> {/* 🟢 ข้อมูลผู้แจ้ง (อยู่ช่องที่ 4) */}
-                      <td className="p-4"> {/* 🟢 ข้อมูลป้ายสถานะ (อยู่ช่องที่ 5) */}
-  <span className={`px-3 py-1 rounded-full text-xs font-bold border ...โค้ดสีเดิมของคุณ...`}>
-    {t.status}
-  </span>
-</td>
-<td className="p-4 flex gap-1.5 justify-center"> {/* 🟢 ปุ่มจัดการต่างๆ (อยู่ช่องที่ 6) */}
-  {/* ... ปุ่มจัดการ, ไทม์ไลน์, ลบ ... */}
-</td>
+                      <td className="p-4">
+                        <p className="font-extrabold text-slate-900">{t.vehicle.plateNumber}</p>
+                        <p className="text-xs text-slate-500 font-bold">{t.vehicle.brand}</p>
+                      </td>
+                      <td className="p-4">
+                        <p className="text-sm text-slate-700">{t.issueDesc}</p>
+                      </td>
+                      <td className="p-4 font-bold text-slate-800">{t.employee.fullName}</td>
+                      <td className="p-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${
+                          t.status === 'รอตรวจสอบ' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                          t.status === 'รอผู้จัดการอนุมัติ' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                          t.status === 'กำลังดำเนินการ' || t.status === 'อยู่ระหว่างซ่อม' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                          t.status === 'ปิดงาน' || t.status === 'ปิดใบซ่อม' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                          t.status === 'ยกเลิก' || t.status === 'ยกเลิกการซ่อม' ? 'bg-rose-100 text-rose-700 border-rose-200' :
+                          'bg-slate-100 text-slate-700 border-slate-200'
+                        }`}>
+                          {t.status}
+                        </span>
+                      </td>
+                      <td className="p-4 flex gap-1.5 justify-center flex-wrap">
+                        <button onClick={() => openEditModal(t)} className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm whitespace-nowrap">
+                          📝 จัดการ
+                        </button>
+                        <button onClick={() => handleOpenTimeline(t.ticketId)} className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm whitespace-nowrap">
+                          ⏱️ ไทม์ไลน์
+                        </button>
+                        <button onClick={() => handleDelete(t.ticketId, t.vehicleId)} className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl text-xs shadow-sm whitespace-nowrap">
+                          ลบ
+                        </button>
+                      </td>
+                    </tr>
                   ))}
+                  {filteredTickets.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-500 font-bold">
+                        ไม่พบข้อมูลใบแจ้งซ่อม
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -196,7 +243,14 @@ export default function MaintenanceManagementPage() {
                 <div>
                   <h4 className="text-sm font-extrabold text-slate-900 mb-2 uppercase">🎯 สถานะปัจจุบันของใบงาน</h4>
                   <select name="status" value={formData.status} onChange={handleFormChange} className="w-full p-4 rounded-xl border-2 border-red-300 bg-red-50 text-red-800 font-extrabold text-lg outline-none cursor-pointer focus:border-red-600 focus:bg-white">
-                    <option value="รอตรวจสอบ">⏳ รอตรวจสอบ</option><option value="รอผู้จัดการอนุมัติ">⏳ รอผู้จัดการอนุมัติ</option><option value="ขออนุมัติหลักการ">⏳ ขออนุมัติหลักการ</option><option value="นำรถเข้าร้าน / อู่">🔧 นำรถเข้าร้าน / อู่</option><option value="อยู่ระหว่างซ่อม">🔧 อยู่ระหว่างซ่อม</option><option value="เบิกจ่าย">💸 เบิกจ่าย</option><option value="ปิดใบซ่อม">🏁 ปิดใบซ่อม (ปลดล็อกรถยนต์)</option><option value="ยกเลิกการซ่อม">❌ ยกเลิกการซ่อม (ปลดล็อกรถยนต์)</option>
+                    <option value="รอตรวจสอบ">⏳ รอตรวจสอบ</option>
+                    <option value="รอผู้จัดการอนุมัติ">⏳ รอผู้จัดการอนุมัติ</option>
+                    <option value="ขออนุมัติหลักการ">⏳ ขออนุมัติหลักการ</option>
+                    <option value="นำรถเข้าร้าน / อู่">🔧 นำรถเข้าร้าน / อู่</option>
+                    <option value="อยู่ระหว่างซ่อม">🔧 อยู่ระหว่างซ่อม</option>
+                    <option value="เบิกจ่าย">💸 เบิกจ่าย</option>
+                    <option value="ปิดใบซ่อม">🏁 ปิดใบซ่อม (ปลดล็อกรถยนต์)</option>
+                    <option value="ยกเลิกการซ่อม">❌ ยกเลิกการซ่อม (ปลดล็อกรถยนต์)</option>
                   </select>
                 </div>
                 
@@ -226,7 +280,6 @@ export default function MaintenanceManagementPage() {
                     <div className="bg-purple-50/50 p-5 rounded-2xl border border-purple-200 shadow-sm space-y-4">
                       <h4 className="text-sm font-extrabold text-purple-800 mb-2 uppercase">🛠️ การดำเนินงานซ่อม</h4>
                       <div>
-                        {/* 🌟 เปลี่ยนช่อง Shop เป็นแบบให้พิมพ์เอง */}
                         <label className="block text-xs font-extrabold text-slate-700 mb-1">ชื่อร้านค้า / อู่ซ่อม (พิมพ์ชื่อได้เลย)</label>
                         <input type="text" name="shopName" value={formData.shopName} onChange={handleFormChange} placeholder="พิมพ์ชื่อร้านซ่อม..." className="w-full p-2.5 rounded-lg border border-slate-300 bg-white font-extrabold text-slate-900 outline-none focus:border-purple-500" />
                       </div>
@@ -258,20 +311,16 @@ export default function MaintenanceManagementPage() {
                   <div><label className="block text-xs font-extrabold text-slate-800 mb-1">📝 สรุปผลการซ่อม (สิ่งที่ดำเนินการไป)</label><textarea name="result" rows={2} value={formData.result} onChange={handleFormChange} className="w-full p-3 rounded-xl border border-slate-300 bg-white font-extrabold text-slate-900 outline-none focus:border-slate-500 shadow-sm" placeholder="ระบุผลการซ่อม..." /></div>
                   <div><label className="block text-xs font-extrabold text-red-600 mb-1">🔒 หมายเหตุภายใน (แสดงเฉพาะแอดมิน)</label><textarea name="adminNote" rows={2} value={formData.adminNote} onChange={handleFormChange} className="w-full p-3 rounded-xl border border-red-300 bg-red-50 font-extrabold text-red-900 outline-none focus:border-red-600 shadow-sm" placeholder="-" /></div>
                 </div>
-
               </form>
             </div>
             
-           {/* 🌟 Footer Buttons 🌟 */}
             <div className="p-4 border-t border-slate-200 bg-slate-100 flex justify-end gap-3 flex-wrap">
               <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-3 rounded-xl font-bold text-slate-600 bg-white border border-slate-300 hover:bg-slate-200 shadow-sm">ยกเลิก</button>
               
-              {/* ปุ่มพิมพ์ใบแจ้งซ่อม (ใบเปิดงานปกติ) */}
               <button type="button" onClick={() => window.open(`/admin/maintenance/print/${currentTicket.ticketId}`, '_blank')} className="px-6 py-3 rounded-xl font-bold text-amber-900 bg-amber-200 border border-amber-400 hover:bg-amber-300 shadow-sm flex items-center gap-2">
                 🖨️ พิมพ์ใบแจ้งซ่อม
               </button>
 
-              {/* 🌟 ปุ่มพิมพ์ใบปิดงานซ่อม (จะโชว์เฉพาะเมื่อสถานะเป็น "ปิดใบซ่อม") 🌟 */}
               {formData.status === 'ปิดใบซ่อม' && (
                 <button type="button" onClick={() => window.open(`/admin/maintenance/print-close/${currentTicket.ticketId}`, '_blank')} className="px-6 py-3 rounded-xl font-bold text-emerald-900 bg-emerald-200 border border-emerald-400 hover:bg-emerald-300 shadow-sm flex items-center gap-2 animate-pulse">
                   ✅ พิมพ์ใบปิดงานซ่อม

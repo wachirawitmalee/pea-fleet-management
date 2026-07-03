@@ -15,7 +15,7 @@ export default function MyBookingsPage() {
   
   const [scannedVehicle, setScannedVehicle] = useState<any>(null);
   const [vehicleBookings, setVehicleBookings] = useState<any[]>([]);
-  const [activeWalkInLog, setActiveWalkInLog] = useState<any>(null); // 🌟 State เก็บ Log สำหรับรถ Walk-in
+  const [activeWalkInLog, setActiveWalkInLog] = useState<any>(null);
 
   const handleScanQR = async (codeToSearch: string) => {
     if (!codeToSearch) {
@@ -26,13 +26,15 @@ export default function MyBookingsPage() {
     setLoading(true);
     setIsCameraOpen(false);
 
+    // 🌟 2. เรียกใช้งาน Popup Loading หมุนๆ ทันทีที่กดปุ่ม
+    showLoading('กำลังตรวจสอบข้อมูล...', 'ระบบกำลังค้นหาข้อมูลรถและคิวการใช้งานครับ');
+
     try {
       const resVehicles = await fetch('/api/vehicles');
       const vehicles = await resVehicles.json();
       const targetVehicle = vehicles.find((v: any) => v.qrCodeData === codeToSearch);
 
       if (!targetVehicle) {
-        // 🌟 เปลี่ยนมาใช้ showError
         showError('ไม่พบรถยนต์', 'รหัส QR Code นี้ไม่ตรงกับรถในระบบ');
         setScannedVehicle(null); setVehicleBookings([]); setActiveWalkInLog(null);
         setLoading(false); return;
@@ -56,8 +58,13 @@ export default function MyBookingsPage() {
       );
       setActiveWalkInLog(activeWalkIn || null);
 
+      // 🌟 3. ตรวจสอบเงื่อนไขการปิด Loading
       if (activeBookings.length === 0 && targetVehicle.isBookable) {
+        // ถ้าเป็นรถจองล่วงหน้าแต่ไม่มีคิว ให้โชว์แจ้งเตือน (ตัวแจ้งเตือนจะทับ Loading ไปเลย)
         Swal.fire({ icon: 'info', title: 'ไม่มีคิวใช้งาน', text: 'รถคันนี้เปิดให้จองล่วงหน้า แต่ยังไม่มีคิวในขณะนี้ครับ', confirmButtonColor: '#10b981', customClass: { popup: 'rounded-[2rem]' } });
+      } else {
+        // ถ้าเจอข้อมูลสำเร็จ และพร้อมโชว์ ให้สั่งปิดหน้าต่าง Loading
+        Swal.close();
       }
 
     } catch (e) {
@@ -67,13 +74,11 @@ export default function MyBookingsPage() {
     }
   };
 
-  // 🌟 ฟังก์ชันจัดการปุ่มกด (รองรับทั้ง Booked และ Walk-in)
   const handleAction = async (b: any, type: 'IN' | 'OUT') => {
-    const isWalkIn = !b; // ถ้าไม่มีข้อมูลใบจอง b แสดงว่าเป็น Walk-in
+    const isWalkIn = !b; 
     const reservationId = b ? b.reservationId : null;
     const vId = isWalkIn ? scannedVehicle.vehicleId : b.vehicleId;
     
-    // ดึงไมล์ขาออกให้ถูกต้อง (ถ้าเป็น Walk-in ให้ดึงจาก activeWalkInLog)
     const mileageOut = isWalkIn ? (activeWalkInLog ? activeWalkInLog.mileageOut : 0) : (b?.checkInOutLog ? b.checkInOutLog.mileageOut : 0);
 
     const { value: formValues } = await Swal.fire({
@@ -81,7 +86,6 @@ export default function MyBookingsPage() {
       html: `
         <div class="text-left space-y-4 mt-4 font-sans" style="text-align: left;">
           
-          ${/* 🌟 กล่องขอรหัสพนักงาน (เฉพาะตอน Walk-in ขาออกเท่านั้น) */ ''}
           ${isWalkIn && type === 'IN' ? `
             <div style="margin-bottom: 12px; background: #fffbeb; padding: 12px; border-radius: 14px; border: 1px solid #fde68a;">
               <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #b45309; margin-bottom: 6px;">รหัสพนักงาน (ผู้ขับขี่) <span style="color: red;">*</span></label>
@@ -148,8 +152,6 @@ export default function MyBookingsPage() {
     });
 
     if (formValues) {
-
-      // 🌟 2. ใช้ Helper Function แสดง Loading
       showLoading('กำลังบันทึกข้อมูล...', 'กรุณารอสักครู่ ระบบกำลังอัปเดตข้อมูล');
 
       try {
@@ -168,11 +170,8 @@ export default function MyBookingsPage() {
         });
 
         if (res.ok) {
-          // 🌟 3. ใช้ Helper Function โชว์ป๊อบอัพสำเร็จ
           await showSuccess('บันทึกสำเร็จ!');
           
-          // 🔥 จุดที่แก้ไข: ลบ handleScanQR ออก แล้วทำการล้างหน้าจอแทน
-          // วิธีนี้จะทำให้หน้ารับ-คืนรถกลับไปเป็นหน้าว่างๆ พร้อมสแกนคันต่อไป โดยไม่มีอะไรเด้งมากวนใจครับ
           setScannedVehicle(null);
           setQrCode('');
           setVehicleBookings([]);
@@ -181,7 +180,6 @@ export default function MyBookingsPage() {
 
         } else {
           const data = await res.json();
-          // 🌟 4. ใช้ Helper Function แสดง Error จาก API
           showError('ข้อผิดพลาด', data.error || 'ไม่สามารถทำรายการได้');
         }
       } catch (error) {
@@ -217,7 +215,14 @@ export default function MyBookingsPage() {
           <div className="flex flex-col gap-4 justify-center">
             {!isCameraOpen && (<button onClick={() => setIsCameraOpen(true)} className="w-full bg-slate-800 hover:bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center gap-2">เปิดกล้องสแกน QR Code</button>)}
             <div className="flex items-center gap-4 my-2"><div className="h-px bg-slate-200 flex-1"></div><span className="text-sm text-slate-400 font-medium">หรือกรอกรหัสด้วยตัวเอง</span><div className="h-px bg-slate-200 flex-1"></div></div>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center"><input type="text" placeholder="พิมพ์รหัส QR Code" className="px-6 py-4 rounded-2xl border border-slate-200 bg-slate-50 text-slate-800 text-center font-bold outline-none w-full sm:w-64" value={qrCode} onChange={(e) => setQrCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleScanQR(qrCode)} /><button onClick={() => handleScanQR(qrCode)} disabled={loading} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-8 py-4 rounded-2xl font-bold shadow-md">ตรวจสอบ</button></div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <input type="text" placeholder="พิมพ์รหัส QR Code" className="px-6 py-4 rounded-2xl border border-slate-200 bg-slate-50 text-slate-800 text-center font-bold outline-none w-full sm:w-64" value={qrCode} onChange={(e) => setQrCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleScanQR(qrCode)} />
+              
+              {/* 🌟 4. แก้ปุ่มกด เปลี่ยนสี เปลี่ยนข้อความให้ผู้ใช้รู้ว่ากำลังทำงาน */}
+              <button onClick={() => handleScanQR(qrCode)} disabled={loading} className={`px-8 py-4 rounded-2xl font-bold shadow-md transition-all text-white ${loading ? 'bg-slate-400 cursor-wait' : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:shadow-lg'}`}>
+                {loading ? '⏳ กำลังค้นหา...' : 'ตรวจสอบ'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -228,7 +233,6 @@ export default function MyBookingsPage() {
               <div><p className="text-slate-300 font-medium text-sm mb-1">{scannedVehicle.brand}</p><h3 className="text-2xl font-bold tracking-wide">{scannedVehicle.plateNumber}</h3></div>
             </div>
 
-            {/* 🌟 กรณีที่ 1: เป็นรถที่ "เปิดให้จองล่วงหน้า" (Normal Flow) */}
             {scannedVehicle.isBookable && vehicleBookings.length > 0 && (
               <div className="bg-white/80 backdrop-blur-md p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="w-2 h-6 bg-purple-600 rounded-full"></span> คิวการใช้งานตามใบจอง</h3>
@@ -249,7 +253,6 @@ export default function MyBookingsPage() {
               </div>
             )}
 
-            {/* 🌟 กรณีที่ 2: เป็นรถที่ "ไม่เปิดให้จองล่วงหน้า" (Walk-in Flow) */}
             {!scannedVehicle.isBookable && scannedVehicle.vehicleStatus !== 'MAINTENANCE' && (
               <div className="bg-white/80 backdrop-blur-md p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
                 <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="w-2 h-6 bg-orange-500 rounded-full"></span> ใช้งานแบบ Walk-in (ไม่ต้องจอง)</h3>

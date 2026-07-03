@@ -147,7 +147,7 @@ export default function MaintenanceManagementPage() {
                     <tr key={t.ticketId} className="hover:bg-slate-50 transition-colors">
                       <td className="p-4 font-mono font-extrabold text-red-700">{t.ticketNumber}</td>
                       <td className="p-4"><p className="font-extrabold text-slate-900">{t.vehicle.plateNumber}</p><p className="text-xs font-bold text-slate-600">{t.vehicle.brand}</p></td>
-                      <td className="p-4"><p className="text-sm text-slate-700">{r.description}</p></td>
+                      <td className="p-4"><p className="text-sm text-slate-700">{t.issueDesc}</p></td>
                       <td className="p-4 font-bold text-slate-800">{t.employee.fullName}</td>
                       <td className="p-4"><span className={`px-3 py-1 rounded-full text-xs font-bold border ${t.status === 'ปิดใบซ่อม' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-100 text-amber-800 border-amber-300'}`}>{t.status}</span></td>
                       <td className="p-4 flex gap-1.5 justify-center">

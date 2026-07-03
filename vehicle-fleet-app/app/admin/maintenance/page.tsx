@@ -139,23 +139,31 @@ export default function MaintenanceManagementPage() {
           {isLoading ? (<div className="p-12 text-center text-red-500 font-bold animate-pulse">กำลังโหลดข้อมูล...</div>) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
-                <thead className="bg-slate-100 border-b border-slate-300">
-                  <tr><th className="p-4 font-bold text-slate-700 text-sm">เลขที่ใบซ่อม</th><th className="p-4 font-bold text-slate-700 text-sm">รถยนต์</th><th className="p-4 font-bold text-slate-700 text-sm">ผู้แจ้ง</th><th className="p-4 font-bold text-slate-700 text-sm">สถานะ</th><th className="p-4 font-bold text-slate-700 text-sm text-center">จัดการ</th></tr>
-                </thead>
+                <thead>
+  <tr className="bg-slate-100 border-b border-slate-200 text-left">
+    <th className="p-4 font-bold text-slate-800 text-sm">เลขที่ใบซ่อม</th>
+    <th className="p-4 font-bold text-slate-800 text-sm">รถยนต์</th>
+    <th className="p-4 font-bold text-slate-800 text-sm">รายการซ่อม</th> {/* 🟢 เพิ่มหัวข้อนี้เข้าไป */}
+    <th className="p-4 font-bold text-slate-800 text-sm">ผู้แจ้ง</th>
+    <th className="p-4 font-bold text-slate-800 text-sm">สถานะ</th>
+    <th className="p-4 font-bold text-slate-800 text-sm text-center">จัดการ</th>
+  </tr>
+</thead>
                 <tbody className="divide-y divide-slate-200">
                   {filteredTickets.map(t => (
                     <tr key={t.ticketId} className="hover:bg-slate-50 transition-colors">
                       <td className="p-4 font-mono font-extrabold text-red-700">{t.ticketNumber}</td>
-                      <td className="p-4"><p className="font-extrabold text-slate-900">{t.vehicle.plateNumber}</p><p className="text-xs font-bold text-slate-600">{t.vehicle.brand}</p></td>
-                      <td className="p-4"><p className="text-sm text-slate-700">{t.issueDesc}</p></td>
-                      <td className="p-4 font-bold text-slate-800">{t.employee.fullName}</td>
-                      <td className="p-4"><span className={`px-3 py-1 rounded-full text-xs font-bold border ${t.status === 'ปิดใบซ่อม' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-amber-100 text-amber-800 border-amber-300'}`}>{t.status}</span></td>
-                      <td className="p-4 flex gap-1.5 justify-center">
-                        <button onClick={() => openEditModal(t)} className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 rounded-xl font-bold text-xs transition-all">📝 จัดการ</button>
-                        <button onClick={() => handleOpenTimeline(t.ticketId)} className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-300 rounded-xl font-bold text-xs transition-all">⏱️ ไทม์ไลน์</button>
-                        <button onClick={() => handleDelete(t.ticketId, t.vehicleId)} className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 border border-red-300 rounded-xl font-bold text-xs transition-all">ลบ</button>
-                      </td>
-                    </tr>
+                      <td className="p-4"><p className="font-extrabold text-slate-900">{t.vehicle.plateNumber}</p><p className="text-xs text-slate-500 font-bold">{t.vehicle.brand}</p></td>
+                      <td className="p-4"><p className="text-sm text-slate-700">{t.issueDesc}</p></td> {/* 🟢 ข้อมูลรายการซ่อม (อยู่ช่องที่ 3) */}
+                      <td className="p-4 font-bold text-slate-800">{t.employee.fullName}</td> {/* 🟢 ข้อมูลผู้แจ้ง (อยู่ช่องที่ 4) */}
+                      <td className="p-4"> {/* 🟢 ข้อมูลป้ายสถานะ (อยู่ช่องที่ 5) */}
+  <span className={`px-3 py-1 rounded-full text-xs font-bold border ...โค้ดสีเดิมของคุณ...`}>
+    {t.status}
+  </span>
+</td>
+<td className="p-4 flex gap-1.5 justify-center"> {/* 🟢 ปุ่มจัดการต่างๆ (อยู่ช่องที่ 6) */}
+  {/* ... ปุ่มจัดการ, ไทม์ไลน์, ลบ ... */}
+</td>
                   ))}
                 </tbody>
               </table>

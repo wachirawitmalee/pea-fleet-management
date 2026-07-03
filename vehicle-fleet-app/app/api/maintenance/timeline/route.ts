@@ -108,6 +108,7 @@ export async function GET(request: Request) {
       success: true,
       ticketNumber: ticket.ticketNumber,
       plateNumber: ticket.vehicle.plateNumber,
+      remark: ticket.remark,
       totalDays,
       events,
       adminNote: ticket.adminNote

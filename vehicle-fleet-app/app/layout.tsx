@@ -11,7 +11,7 @@ const prompt = Prompt({
 });
 
 export const metadata: Metadata = {
-  title: "Fleet Management",
+  title: "Smart Fleet Care",
   description: "Enterprise Vehicle Reservation System",
 };
 

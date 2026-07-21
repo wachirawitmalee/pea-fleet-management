@@ -110,7 +110,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg">PEA</div>
-            <span className="font-bold text-xl text-slate-800 hidden sm:block">Fleet Management</span>
+            <span className="font-bold text-xl text-slate-800 hidden sm:block">Smart Fleet Care</span>
           </div>
           <div className="text-sm font-bold text-purple-700 bg-purple-100 px-4 py-2 rounded-full border border-purple-200 shadow-sm">
             สถานที่ปฏิบัติงาน: สาขาระโนด

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
+import { vehicleUrl } from '@/lib/vehicle-qr';
 
 export default function AdminVehiclesPage() {
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -79,22 +80,32 @@ export default function AdminVehiclesPage() {
     }
   };
 
-  const handlePrintQR = (qrData: string, plate: string) => {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(qrData)}`;
+  const handlePrintQR = async (vehicleId: string, plate: string) => {
+    const link = vehicleUrl(process.env.NEXT_PUBLIC_APP_URL || window.location.origin, vehicleId);
+    const host = new URL(link).hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
+      await Swal.fire({ icon: 'info', title: 'กรุณาเปิดระบบผ่านเว็บไซต์จริง', text: 'ตั้งค่า NEXT_PUBLIC_APP_URL เป็น URL ที่โทรศัพท์เปิดได้ ก่อนพิมพ์ QR' });
+      return;
+    }
     const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head><title>Print QR Code - ${plate}</title></head>
-          <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; margin:0; font-family:sans-serif;">
-            <h1 style="font-size: 3rem; margin-bottom: 20px;">ทะเบียน: ${plate}</h1>
-            <img src="${qrUrl}" style="width: 400px; height: 400px; border: 10px solid black; padding: 20px;" />
-            <p style="font-size: 1.5rem; margin-top: 20px;">QR CODE สำหรับสแกนรับ-คืนรถ</p>
-            <script>setTimeout(() => { window.print(); }, 1000);</script>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
+    if (!printWindow) { await Swal.fire('กรุณาอนุญาตหน้าต่างป๊อปอัปเพื่อพิมพ์ QR'); return; }
+    printWindow.opener = null;
+    try {
+      const QRCode = await import('qrcode');
+      const image = await QRCode.toDataURL(link, { width: 600, margin: 4, errorCorrectionLevel: 'Q' });
+      const doc = printWindow.document;
+      doc.title = 'QR รถ ' + plate;
+      doc.body.style.cssText = 'text-align:center;font-family:sans-serif;padding:32px';
+      const heading = doc.createElement('h1'); heading.textContent = 'ทะเบียน: ' + plate;
+      const img = doc.createElement('img'); img.width = 350; img.height = 350; img.alt = 'QR เปิดหน้ารถ ' + plate;
+      const caption = doc.createElement('p'); caption.textContent = 'ใช้กล้องโทรศัพท์สแกนเพื่อเปิดหน้ารับ–คืนรถคันนี้';
+      const anchor = doc.createElement('a'); anchor.href = link; anchor.textContent = link;
+      doc.body.append(heading, img, caption, anchor);
+      img.onload = () => { printWindow.focus(); printWindow.print(); };
+      img.src = image;
+    } catch {
+      printWindow.close();
+      await Swal.fire({ icon: 'error', title: 'สร้าง QR ไม่สำเร็จ กรุณาลองใหม่' });
     }
   };
 
@@ -151,7 +162,7 @@ export default function AdminVehiclesPage() {
                       <tr key={v.vehicleId} className="hover:bg-slate-50 transition-colors">
                         <td className="p-4">
                           <p className="font-extrabold text-slate-900 text-lg">{v.plateNumber}</p>
-                          <button onClick={() => handlePrintQR(v.qrCodeData, v.plateNumber)} className="mt-2 text-xs font-bold text-slate-700 bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm flex items-center gap-1">🖨️ พิมพ์ QR Code</button>
+                          <button onClick={() => handlePrintQR(v.vehicleId, v.plateNumber)} className="mt-2 text-xs font-bold text-slate-700 bg-slate-200 hover:bg-slate-300 px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm flex items-center gap-1">🖨️ พิมพ์ QR Code</button>
                         </td>
                         <td className="p-4 font-bold text-slate-800">{v.brand} {v.model}</td>
                         <td className="p-4 font-extrabold text-emerald-700">{v.currentMileage ? v.currentMileage.toLocaleString() : '0'} กม.</td>

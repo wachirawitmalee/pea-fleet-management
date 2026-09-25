@@ -1,0 +1,1194 @@
+[
+  {
+    "name": "Employee",
+    "fields": [
+      {
+        "name": "employeeId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": true,
+        "isUnique": false
+      },
+      {
+        "name": "fullName",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "position",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "department",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "workPlace",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "role",
+        "type": "Role",
+        "kind": "enum",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": "USER"
+      },
+      {
+        "name": "status",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": "ACTIVE"
+      },
+      {
+        "name": "maintenanceTickets",
+        "type": "MaintenanceTicket",
+        "kind": "object",
+        "isRequired": true,
+        "isList": true,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [],
+        "relationToFields": []
+      },
+      {
+        "name": "checkInOutLogs",
+        "type": "CheckInOutLog",
+        "kind": "object",
+        "isRequired": true,
+        "isList": true,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [],
+        "relationToFields": []
+      },
+      {
+        "name": "reservations",
+        "type": "Reservation",
+        "kind": "object",
+        "isRequired": true,
+        "isList": true,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [],
+        "relationToFields": []
+      }
+    ]
+  },
+  {
+    "name": "Vehicle",
+    "fields": [
+      {
+        "name": "vehicleId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": true,
+        "isUnique": false,
+        "default": {
+          "name": "uuid(4)",
+          "args": []
+        }
+      },
+      {
+        "name": "plateNumber",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": true
+      },
+      {
+        "name": "brand",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "model",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "year",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "type",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "department",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "vehicleStatus",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": "AVAILABLE"
+      },
+      {
+        "name": "qrCodeData",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": true
+      },
+      {
+        "name": "currentMileage",
+        "type": "Int",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": 0
+      },
+      {
+        "name": "isBookable",
+        "type": "Boolean",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": true
+      },
+      {
+        "name": "taxExpireDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "nextCheckDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "nextCheckMileage",
+        "type": "Int",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "fuelRecords",
+        "type": "FuelRecord",
+        "kind": "object",
+        "isRequired": true,
+        "isList": true,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [],
+        "relationToFields": []
+      },
+      {
+        "name": "reservations",
+        "type": "Reservation",
+        "kind": "object",
+        "isRequired": true,
+        "isList": true,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [],
+        "relationToFields": []
+      },
+      {
+        "name": "maintenanceTickets",
+        "type": "MaintenanceTicket",
+        "kind": "object",
+        "isRequired": true,
+        "isList": true,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [],
+        "relationToFields": []
+      },
+      {
+        "name": "checkInOutLogs",
+        "type": "CheckInOutLog",
+        "kind": "object",
+        "isRequired": true,
+        "isList": true,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [],
+        "relationToFields": []
+      }
+    ]
+  },
+  {
+    "name": "Reservation",
+    "fields": [
+      {
+        "name": "reservationId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": true,
+        "isUnique": false,
+        "default": {
+          "name": "uuid(4)",
+          "args": []
+        }
+      },
+      {
+        "name": "employeeId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "vehicleId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "startDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "startTime",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "endDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "endTime",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "destination",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "purpose",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "reservationStatus",
+        "type": "ReserveStatus",
+        "kind": "enum",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": "BOOKED"
+      },
+      {
+        "name": "employee",
+        "type": "Employee",
+        "kind": "object",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [
+          "employeeId"
+        ],
+        "relationToFields": [
+          "employeeId"
+        ]
+      },
+      {
+        "name": "vehicle",
+        "type": "Vehicle",
+        "kind": "object",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [
+          "vehicleId"
+        ],
+        "relationToFields": [
+          "vehicleId"
+        ]
+      },
+      {
+        "name": "logs",
+        "type": "CheckInOutLog",
+        "kind": "object",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [],
+        "relationToFields": []
+      }
+    ]
+  },
+  {
+    "name": "CheckInOutLog",
+    "fields": [
+      {
+        "name": "logId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": true,
+        "isUnique": false,
+        "default": {
+          "name": "uuid(4)",
+          "args": []
+        }
+      },
+      {
+        "name": "reservationId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": true
+      },
+      {
+        "name": "reservation",
+        "type": "Reservation",
+        "kind": "object",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [
+          "reservationId"
+        ],
+        "relationToFields": [
+          "reservationId"
+        ]
+      },
+      {
+        "name": "vehicleId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "vehicle",
+        "type": "Vehicle",
+        "kind": "object",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [
+          "vehicleId"
+        ],
+        "relationToFields": [
+          "vehicleId"
+        ]
+      },
+      {
+        "name": "employeeId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "employee",
+        "type": "Employee",
+        "kind": "object",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [
+          "employeeId"
+        ],
+        "relationToFields": [
+          "employeeId"
+        ]
+      },
+      {
+        "name": "checkInTime",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": {
+          "name": "now",
+          "args": []
+        }
+      },
+      {
+        "name": "mileageOut",
+        "type": "Int",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "photoOutUrl",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "checkOutTime",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "mileageIn",
+        "type": "Int",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "photoInUrl",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "remark",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "Department",
+    "fields": [
+      {
+        "name": "departmentCode",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": true,
+        "isUnique": false
+      },
+      {
+        "name": "departmentName",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "Shop",
+    "fields": [
+      {
+        "name": "shopId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": true,
+        "isUnique": false,
+        "default": {
+          "name": "uuid(4)",
+          "args": []
+        }
+      },
+      {
+        "name": "shopName",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": true
+      },
+      {
+        "name": "address",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "phone",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "serviceType",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "note",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "maintenanceTickets",
+        "type": "MaintenanceTicket",
+        "kind": "object",
+        "isRequired": true,
+        "isList": true,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [],
+        "relationToFields": []
+      }
+    ]
+  },
+  {
+    "name": "MaintenanceTicket",
+    "fields": [
+      {
+        "name": "ticketId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": true,
+        "isUnique": false,
+        "default": {
+          "name": "uuid(4)",
+          "args": []
+        }
+      },
+      {
+        "name": "ticketNumber",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": true
+      },
+      {
+        "name": "requestDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": {
+          "name": "now",
+          "args": []
+        }
+      },
+      {
+        "name": "vehicleId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "vehicle",
+        "type": "Vehicle",
+        "kind": "object",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [
+          "vehicleId"
+        ],
+        "relationToFields": [
+          "vehicleId"
+        ]
+      },
+      {
+        "name": "employeeId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "employee",
+        "type": "Employee",
+        "kind": "object",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [
+          "employeeId"
+        ],
+        "relationToFields": [
+          "employeeId"
+        ]
+      },
+      {
+        "name": "shopId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "shop",
+        "type": "Shop",
+        "kind": "object",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [
+          "shopId"
+        ],
+        "relationToFields": [
+          "shopId"
+        ]
+      },
+      {
+        "name": "issueDesc",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "mileage",
+        "type": "Int",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "status",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": "รอตรวจสอบ"
+      },
+      {
+        "name": "quoteDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "managerApproveDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "principleDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "prNo",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "prDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "poNo",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "poDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "instructionDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "entryDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "partsReturnDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "finishDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "result",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "docReceiveDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "sendFinanceDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "voucherDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "cost",
+        "type": "Float",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "adminNote",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "FuelRecord",
+    "fields": [
+      {
+        "name": "id",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": true,
+        "isUnique": false,
+        "default": {
+          "name": "uuid(4)",
+          "args": []
+        }
+      },
+      {
+        "name": "date",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "vehicleId",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "vehicle",
+        "type": "Vehicle",
+        "kind": "object",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "relationFromFields": [
+          "vehicleId"
+        ],
+        "relationToFields": [
+          "vehicleId"
+        ],
+        "relationOnDelete": "Cascade"
+      },
+      {
+        "name": "mileage",
+        "type": "Int",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "voucherVolume",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "voucherNumber",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "voucherDate",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "stationName",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "fuelType",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "quantity",
+        "type": "Float",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "pricePerLiter",
+        "type": "Float",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "totalAmount",
+        "type": "Float",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "netAmount",
+        "type": "Float",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "vatAmount",
+        "type": "Float",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "createdAt",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": {
+          "name": "now",
+          "args": []
+        }
+      },
+      {
+        "name": "updatedAt",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      }
+    ]
+  },
+  {
+    "name": "SystemSetting",
+    "fields": [
+      {
+        "name": "id",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": true,
+        "isUnique": false,
+        "default": "1"
+      },
+      {
+        "name": "alertEmail",
+        "type": "String",
+        "kind": "scalar",
+        "isRequired": false,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      },
+      {
+        "name": "createdAt",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false,
+        "default": {
+          "name": "now",
+          "args": []
+        }
+      },
+      {
+        "name": "updatedAt",
+        "type": "DateTime",
+        "kind": "scalar",
+        "isRequired": true,
+        "isList": false,
+        "isId": false,
+        "isUnique": false
+      }
+    ]
+  }
+]

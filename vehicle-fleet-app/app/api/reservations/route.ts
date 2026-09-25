@@ -1,41 +1,23 @@
+import { withStorage } from '@/lib/storage/sheets';
+import { bookingTime } from '@/lib/fleet-time';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+
+
 
 export async function GET() {
   try {
-    let reservations = await prisma.reservation.findMany({
+    const reservations = await prisma.reservation.findMany({
       include: { vehicle: true, employee: true },
       orderBy: { startDate: 'desc' }
     });
     
-    const now = new Date();
-
-    // 🌟 ยกเลิกอัตโนมัติถ้ารอรับรถเกิน 1 ชั่วโมง (ป้องกันการจองค้างในตารางหลัก)
-    for (const r of reservations) {
-      if (r.reservationStatus === 'BOOKED') {
-        const startDateTime = new Date(r.startDate);
-        if (r.startTime) {
-          const [h, m] = r.startTime.split(':').map(Number);
-          startDateTime.setHours(h, m, 0, 0);
-        }
-        const cancelTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); 
-        
-        if (now >= cancelTime) {
-          await prisma.reservation.update({
-            where: { reservationId: r.reservationId },
-            data: { reservationStatus: 'CANCELLED' }
-          });
-          r.reservationStatus = 'CANCELLED';
-        }
-      }
-    }
-
     const logs = await prisma.checkInOutLog.findMany();
+    const logByReservation = new Map(logs.map(log => [log.reservationId, log]));
     const dataWithLogs = reservations.map(res => ({
       ...res,
-      checkInOutLog: logs.find(l => l.reservationId === res.reservationId) || null
+      checkInOutLog: logByReservation.get(res.reservationId) || null
     }));
 
     return NextResponse.json(dataWithLogs);
@@ -44,7 +26,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     const { employeeId, vehicleId, startDate, startTime, endDate, endTime, destination, purpose } = body;
@@ -57,14 +39,16 @@ export async function POST(request: Request) {
       where: { vehicleId: vehicleId, reservationStatus: { in: ['BOOKED', 'CHECKED_IN'] } }
     });
 
-    const newStart = new Date(`${startDate.split('T')[0]}T${startTime || '00:00'}`);
-    const newEnd = new Date(`${endDate.split('T')[0]}T${endTime || '23:59'}`);
+    if (!/^\d{2}:\d{2}$/.test(startTime || '') || !/^\d{2}:\d{2}$/.test(endTime || '')) return NextResponse.json({ error: 'กรุณาระบุเวลาให้ถูกต้อง' }, { status: 400 });
+    const newStart = bookingTime(startDate, startTime);
+    const newEnd = bookingTime(endDate, endTime);
+    if (!Number.isFinite(newStart.getTime()) || !Number.isFinite(newEnd.getTime()) || newEnd <= newStart) return NextResponse.json({ error: 'วันและเวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น' }, { status: 400 });
+    const [employee, vehicle] = await Promise.all([prisma.employee.findUnique({ where: { employeeId } }), prisma.vehicle.findUnique({ where: { vehicleId } })]);
+    if (!employee || employee.status !== 'ACTIVE' || !vehicle || !vehicle.isBookable || vehicle.vehicleStatus === 'MAINTENANCE') return NextResponse.json({ error: 'พนักงานหรือรถยนต์ไม่พร้อมสำหรับการจอง' }, { status: 400 });
 
     const isOverlapping = existingReservations.some(res => {
-      const extStartStr = res.startDate.toISOString().split('T')[0];
-      const extEndStr = res.endDate.toISOString().split('T')[0];
-      const extStart = new Date(`${extStartStr}T${res.startTime || '00:00'}`);
-      const extEnd = new Date(`${extEndStr}T${res.endTime || '23:59'}`);
+      const extStart = bookingTime(res.startDate, res.startTime);
+      const extEnd = bookingTime(res.endDate, res.endTime);
       return (newStart < extEnd && newEnd > extStart);
     });
 
@@ -82,7 +66,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+async function handlePUT(request: Request) {
   try {
     const body = await request.json();
     const { reservationId, reservationStatus } = body;
@@ -95,7 +79,7 @@ export async function PUT(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const reservationId = searchParams.get('id');
@@ -114,3 +98,8 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'ไม่สามารถลบรายการจองนี้ได้' }, { status: 500 });
   }
 }
+export const POST = withStorage(handlePOST);
+
+export const PUT = withStorage(handlePUT);
+
+export const DELETE = withStorage(handleDELETE);

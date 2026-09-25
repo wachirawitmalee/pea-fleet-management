@@ -1,7 +1,9 @@
+import { withStorage } from '@/lib/storage/sheets';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+
+
 
 export async function GET() {
   try {
@@ -15,7 +17,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     const { vehicleId, employeeId, issueDesc, mileage, requestDate } = body;
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+async function handlePUT(request: Request) {
   try {
     const body = await request.json();
     // 🌟 รับค่า shopName มาจากการพิมพ์เอง
@@ -99,7 +101,7 @@ export async function PUT(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const ticketId = searchParams.get('id');
@@ -118,3 +120,8 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'ไม่สามารถลบใบแจ้งซ่อมนี้ได้' }, { status: 500 });
   }
 }
+export const POST = withStorage(handlePOST);
+
+export const PUT = withStorage(handlePUT);
+
+export const DELETE = withStorage(handleDELETE);

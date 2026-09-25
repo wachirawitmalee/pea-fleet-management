@@ -1,38 +1,27 @@
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { fleetAnalytics } from '@/lib/analytics';
+import { bangkokMonth, bookingTime } from '@/lib/fleet-time';
 
-const prisma = new PrismaClient();
 
-export async function GET() {
+
+
+export async function GET(request: Request) {
   try {
-    const vehicles = await prisma.vehicle.findMany();
-    let reservations = await prisma.reservation.findMany({
-      include: { employee: true, vehicle: true }
-    });
+    const month = new URL(request.url).searchParams.get('month') || bangkokMonth(new Date());
+    if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month)) return NextResponse.json({ error: 'เดือนไม่ถูกต้อง' }, { status: 400 });
+    const [vehicles, reservations, fuel, logs, repairs] = await Promise.all([
+      prisma.vehicle.findMany(),
+      prisma.reservation.findMany({ include: { employee: true, vehicle: true } }),
+      prisma.fuelRecord.findMany({ select: { date: true, vehicleId: true, quantity: true, totalAmount: true } }),
+      prisma.checkInOutLog.findMany({ select: { reservationId: true, vehicleId: true, checkOutTime: true, mileageOut: true, mileageIn: true } }),
+      prisma.maintenanceTicket.findMany({ select: { vehicleId: true, requestDate: true, cost: true, status: true } }),
+    ]);
+    const logMap = new Map(logs.map(log => [log.reservationId, log]));
+    const analytics = fleetAnalytics(vehicles, fuel, logs, repairs, month);
 
     const now = new Date();
-    const alerts: any[] = []; // 🌟 ตัวแปรเก็บรายการแจ้งเตือน
-
-    // 🌟 ระบบทำความสะอาด: ยกเลิกอัตโนมัติถ้ารอรับรถเกิน 1 ชั่วโมง
-    for (const r of reservations) {
-      if (r.reservationStatus === 'BOOKED') {
-        const startDateTime = new Date(r.startDate);
-        if (r.startTime) {
-          const [h, m] = r.startTime.split(':').map(Number);
-          startDateTime.setHours(h, m, 0, 0);
-        }
-        
-        const cancelTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); 
-        
-        if (now >= cancelTime) {
-          await prisma.reservation.update({
-            where: { reservationId: r.reservationId },
-            data: { reservationStatus: 'CANCELLED' }
-          });
-          r.reservationStatus = 'CANCELLED'; 
-        }
-      }
-    }
+    const alerts: { level: string; icon: string; message: string }[] = [];
 
     // 🌟 ระบบแจ้งเตือนอัจฉริยะ (Alerts Logic)
     vehicles.forEach(v => {
@@ -43,9 +32,9 @@ export async function GET() {
         const diffTime = new Date(v.taxExpireDate).getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         if (diffDays < 0) {
-          alerts.push({ level: 'danger', icon: '⛔', message: `รถทะเบียน <b>${plate}</b> ภาษีขาดต่ออายุ!` });
+          alerts.push({ level: 'danger', icon: '⛔', message: `รถทะเบียน ${plate} ภาษีขาดต่ออายุ!` });
         } else if (diffDays <= 30) {
-          alerts.push({ level: 'warning', icon: '📅', message: `รถทะเบียน <b>${plate}</b> ภาษีจะหมดอายุในอีก ${diffDays} วัน` });
+          alerts.push({ level: 'warning', icon: '📅', message: `รถทะเบียน ${plate} ภาษีจะหมดอายุในอีก ${diffDays} วัน` });
         }
       }
 
@@ -53,9 +42,9 @@ export async function GET() {
       if (v.nextCheckMileage && v.currentMileage !== undefined) {
         const left = v.nextCheckMileage - v.currentMileage;
         if (left <= 0) {
-          alerts.push({ level: 'danger', icon: '🔧', message: `รถทะเบียน <b>${plate}</b> เกินระยะที่ต้องเข้าศูนย์/เช็คช่วงล่างแล้ว!` });
+          alerts.push({ level: 'danger', icon: '🔧', message: `รถทะเบียน ${plate} เกินระยะที่ต้องเข้าศูนย์/เช็คช่วงล่างแล้ว!` });
         } else if (left <= 1000) {
-          alerts.push({ level: 'info', icon: '🛠️', message: `รถทะเบียน <b>${plate}</b> อีก ${left.toLocaleString()} กม. จะถึงกำหนดเช็คระยะ` });
+          alerts.push({ level: 'info', icon: '🛠️', message: `รถทะเบียน ${plate} อีก ${left.toLocaleString()} กม. จะถึงกำหนดเช็คระยะ` });
         }
       }
 
@@ -64,9 +53,9 @@ export async function GET() {
         const diffTime = new Date(v.nextCheckDate).getTime() - now.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         if (diffDays < 0) {
-           alerts.push({ level: 'danger', icon: '🔧', message: `รถทะเบียน <b>${plate}</b> เลยกำหนดเข้าเช็คระยะตามวันที่แล้ว!` });
+           alerts.push({ level: 'danger', icon: '🔧', message: `รถทะเบียน ${plate} เลยกำหนดเข้าเช็คระยะตามวันที่แล้ว!` });
         } else if (diffDays <= 15) {
-           alerts.push({ level: 'warning', icon: '🛠️', message: `รถทะเบียน <b>${plate}</b> จะถึงกำหนดเช็คระยะในอีก ${diffDays} วัน` });
+           alerts.push({ level: 'warning', icon: '🛠️', message: `รถทะเบียน ${plate} จะถึงกำหนดเช็คระยะในอีก ${diffDays} วัน` });
         }
       }
     });
@@ -78,14 +67,14 @@ export async function GET() {
     const totalReservations = reservations.length;
 
     const deptCounts: Record<string, number> = {};
-    reservations.forEach(r => {
+    reservations.filter(r => r.reservationStatus !== 'CANCELLED').forEach(r => {
       const dept = r.employee.department || 'ไม่ระบุแผนก';
       deptCounts[dept] = (deptCounts[dept] || 0) + 1;
     });
     const topDepartments = Object.entries(deptCounts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
 
     const vehicleCounts: Record<string, number> = {};
-    reservations.forEach(r => {
+    reservations.filter(r => r.reservationStatus !== 'CANCELLED').forEach(r => {
       const name = `${r.vehicle.plateNumber}`;
       vehicleCounts[name] = (vehicleCounts[name] || 0) + 1;
     });
@@ -99,24 +88,17 @@ export async function GET() {
 
     const activeBookings = reservations.filter(r => {
       if (r.reservationStatus === 'BOOKED') {
-        const startDateTime = new Date(r.startDate);
-        if (r.startTime) {
-          const [h, m] = r.startTime.split(':').map(Number);
-          startDateTime.setHours(h, m, 0, 0);
-        }
+        const startDateTime = bookingTime(r.startDate, r.startTime);
         return now > startDateTime; 
       }
       if (r.reservationStatus === 'CHECKED_IN') {
-        const endDateTime = new Date(r.endDate);
-        if (r.endTime) {
-          const [h, m] = r.endTime.split(':').map(Number);
-          endDateTime.setHours(h, m, 0, 0);
-        }
+        const endDateTime = bookingTime(r.endDate, r.endTime);
         return now > endDateTime;
       }
       return false; 
     }).map(r => ({
       ...r,
+      checkInOutLog: logMap.get(r.reservationId) || null,
       isOverdue: true,
       overdueType: r.reservationStatus === 'BOOKED' ? 'LATE_CHECKIN' : 'LATE_CHECKOUT'
     }));
@@ -124,7 +106,7 @@ export async function GET() {
     // 🌟 ส่ง alerts กลับไปให้หน้าบ้านด้วย
     return NextResponse.json({
       totalVehicles, availableVehicles, inUseVehicles, totalReservations,
-      topDepartments, topVehicles, vehicleStatus, activeBookings, alerts
+      topDepartments, topVehicles, vehicleStatus, activeBookings, alerts, analytics
     });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch dashboard data' }, { status: 500 });

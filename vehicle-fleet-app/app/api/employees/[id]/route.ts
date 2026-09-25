@@ -1,7 +1,8 @@
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+
+
 
 // กฎใหม่ Next.js 15: params จะถูกมองเป็น Promise
 export async function GET(

@@ -1,7 +1,9 @@
+import { withStorage } from '@/lib/storage/sheets';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+
+
 
 // 1. GET: ดึงข้อมูลร้านค้าทั้งหมด
 export async function GET() {
@@ -16,7 +18,7 @@ export async function GET() {
 }
 
 // 2. POST: เพิ่มร้านค้าใหม่
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     const { shopName, address, phone, serviceType, note } = body;
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
 }
 
 // 3. PUT: แก้ไขข้อมูลร้านค้า
-export async function PUT(request: Request) {
+async function handlePUT(request: Request) {
   try {
     const body = await request.json();
     const { shopId, shopName, address, phone, serviceType, note } = body;
@@ -56,7 +58,7 @@ export async function PUT(request: Request) {
 }
 
 // 4. DELETE: ลบร้านค้า
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const shopId = searchParams.get('id');
@@ -74,3 +76,8 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'ไม่สามารถลบร้านค้านี้ได้ เนื่องจากอาจมีประวัติผูกกับใบแจ้งซ่อมอยู่' }, { status: 500 });
   }
 }
+export const POST = withStorage(handlePOST);
+
+export const PUT = withStorage(handlePUT);
+
+export const DELETE = withStorage(handleDELETE);

@@ -1,7 +1,9 @@
+import { withStorage } from '@/lib/storage/sheets';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+
+
 
 export async function GET(request: Request) {
   try {
@@ -33,7 +35,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     const newRecord = await prisma.fuelRecord.create({
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function PUT(request: Request) {
+async function handlePUT(request: Request) {
   try {
     const body = await request.json();
     const updatedRecord = await prisma.fuelRecord.update({
@@ -86,7 +88,7 @@ export async function PUT(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -98,3 +100,8 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Failed to delete record' }, { status: 500 });
   }
 }
+export const POST = withStorage(handlePOST);
+
+export const PUT = withStorage(handlePUT);
+
+export const DELETE = withStorage(handleDELETE);

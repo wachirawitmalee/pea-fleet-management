@@ -1,7 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import type { FleetAnalytics } from '@/lib/analytics';
+const FleetAnalyticsPanel = dynamic(() => import('./components/fleet-analytics'), { loading: () => <p className="py-8 text-center text-slate-500">กำลังโหลดกราฟ...</p> });
+import { preparePhoto } from '@/lib/prepare-photo';
 import Swal from 'sweetalert2';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
@@ -12,23 +16,31 @@ export default function Home() {
   const [stats, setStats] = useState({
     totalVehicles: 0, availableVehicles: 0, inUseVehicles: 0, totalReservations: 0,
     topDepartments: [] as any[], topVehicles: [] as any[], vehicleStatus: [] as any[], activeBookings: [] as any[],
+    analytics: null as FleetAnalytics | null,
     alerts: [] as any[] // 🌟 เพิ่ม State รับการแจ้งเตือน
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => { fetchDashboardData(); }, []);
-
-  const fetchDashboardData = async () => {
-    setIsLoading(true);
+  const [month, setMonth] = useState(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7));
+  const [loadError, setLoadError] = useState('');
+  const pending = useRef<AbortController | null>(null);
+  const fetchDashboardData = useCallback(async () => {
+    pending.current?.abort();
+    const controller = new AbortController();
+    pending.current = controller;
+    setIsLoading(true); setLoadError('');
     try {
-      const res = await fetch('/api/dashboard');
-      if (res.ok) setStats(await res.json());
+      const res = await fetch(`/api/dashboard?month=${month}`, { signal: controller.signal });
+      if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่');
+      const data = await res.json();
+      if (!controller.signal.aborted) setStats(data);
     } catch (error) {
-      console.error(error);
+      if (!controller.signal.aborted) setLoadError(error instanceof Error ? error.message : 'ไม่สามารถโหลดข้อมูลได้');
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) setIsLoading(false);
     }
-  };
+  }, [month]);
+  useEffect(() => { fetchDashboardData(); return () => pending.current?.abort(); }, [fetchDashboardData]);
 
   const handleAction = async (b: any, type: 'IN' | 'OUT') => {
     const reservationId = b.reservationId;
@@ -65,11 +77,8 @@ export default function Home() {
         let base64Photo = '';
         if (fileInput.files && fileInput.files[0]) {
           const file = fileInput.files[0];
-          base64Photo = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
+          try { base64Photo = await preparePhoto(file); }
+          catch (error) { return Swal.showValidationMessage(error instanceof Error ? error.message : 'ไม่สามารถอ่านรูปภาพได้'); }
         }
         return { mileage: m, photoUrl: base64Photo, remark: r };
       }
@@ -150,6 +159,12 @@ export default function Home() {
         </div>
 
         <div className="max-w-6xl mx-auto space-y-10 mt-8">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <label className="text-sm font-semibold text-slate-600">เดือนที่ต้องการวิเคราะห์<input aria-label="เดือนที่ต้องการวิเคราะห์" type="month" value={month} onChange={e => { if (e.target.value) setMonth(e.target.value); }} className="block mt-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-slate-800" /></label>
+            <button type="button" onClick={() => fetchDashboardData()} disabled={isLoading} className="rounded-xl bg-indigo-600 text-white px-5 py-2.5 font-semibold disabled:opacity-50">{isLoading ? 'กำลังโหลด...' : 'รีเฟรชข้อมูล'}</button>
+          </div>
+          {loadError && <div role="alert" className="rounded-xl bg-red-50 border border-red-200 text-red-700 p-4">{loadError} กรุณากดรีเฟรชข้อมูล</div>}
+          {!isLoading && !loadError && stats.analytics && <FleetAnalyticsPanel data={stats.analytics} />}
           
           {/* 🌟 กล่องแจ้งเตือนอัจฉริยะ (Alerts) จะแสดงเฉพาะตอนที่มีปัญหาเท่านั้น */}
           {!isLoading && stats.alerts && stats.alerts.length > 0 && (
@@ -163,7 +178,7 @@ export default function Home() {
                   <div key={idx} className={`p-4 rounded-2xl border-l-4 shadow-sm flex items-start gap-3 bg-white 
                     ${alert.level === 'danger' ? 'border-red-500 text-red-800' : alert.level === 'warning' ? 'border-amber-500 text-amber-800' : 'border-blue-500 text-blue-800'}`}>
                     <span className="text-2xl">{alert.icon}</span>
-                    <div className="font-semibold text-sm mt-1 leading-snug" dangerouslySetInnerHTML={{ __html: alert.message }}></div>
+                    <div className="font-semibold text-sm mt-1 leading-snug">{alert.message}</div>
                   </div>
                 ))}
               </div>
@@ -174,7 +189,7 @@ export default function Home() {
           <section>
             <div className="flex items-center gap-4 mb-6"><h2 className="text-2xl font-extrabold text-slate-800 flex items-center gap-2"><span className="text-3xl">⚠️</span> คิวจองที่มีปัญหา (ลืมรับ/คืนรถ)</h2><div className="h-px bg-slate-200 flex-1"></div></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {stats.activeBookings.length === 0 ? (
+              {isLoading || loadError ? (<div className="col-span-full p-6 text-center text-slate-500">{loadError ? 'ยังไม่สามารถตรวจสอบคิวได้' : 'กำลังตรวจสอบคิว...'}</div>) : stats.activeBookings.length === 0 ? (
                 <div className="col-span-full bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100 text-center text-emerald-600 font-bold">✅ ยอดเยี่ยม! ตอนนี้ไม่มีรถคันไหนเลยเวลาจอง หรือเลยเวลาคืนเลยครับ</div>
               ) : (
                 stats.activeBookings.map((b: any) => (

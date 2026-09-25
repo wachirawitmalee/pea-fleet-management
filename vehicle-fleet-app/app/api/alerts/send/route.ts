@@ -1,11 +1,12 @@
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+
 import nodemailer from 'nodemailer';
 
 // บังคับไม่ให้จำค่าแคช เพื่อให้ดึงข้อมูลใหม่แบบ Real-time ทุกครั้งที่รัน
 export const dynamic = 'force-dynamic';
 
-const prisma = new PrismaClient();
+
 
 // 🌟 ย้ายโค้ดการทำงานหลักมาไว้ในฟังก์ชันกลาง เพื่อให้ทั้ง GET และ POST เรียกใช้ร่วมกันได้
 async function sendAlertsHandler() {

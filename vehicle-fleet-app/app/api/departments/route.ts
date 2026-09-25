@@ -1,7 +1,9 @@
+import { withStorage } from '@/lib/storage/sheets';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+
+
 
 // 1. GET: ดึงแผนกทั้งหมด
 export async function GET() {
@@ -16,7 +18,7 @@ export async function GET() {
 }
 
 // 2. POST: เพิ่มแผนกใหม่ (🌟 รันรหัสอัตโนมัติ)
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     const { departmentName } = body;
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
 }
 
 // 3. PUT: แก้ไขแผนก
-export async function PUT(request: Request) {
+async function handlePUT(request: Request) {
   try {
     const body = await request.json();
     const { departmentCode, departmentName } = body;
@@ -66,7 +68,7 @@ export async function PUT(request: Request) {
 }
 
 // 4. DELETE: ลบแผนก
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const departmentCode = searchParams.get('id');
@@ -84,3 +86,8 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'ไม่สามารถลบแผนกได้ เนื่องจากอาจมีพนักงานผูกอยู่กับแผนกนี้' }, { status: 500 });
   }
 }
+export const POST = withStorage(handlePOST);
+
+export const PUT = withStorage(handlePUT);
+
+export const DELETE = withStorage(handleDELETE);

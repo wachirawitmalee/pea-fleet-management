@@ -1,9 +1,11 @@
+import { withStorage } from '@/lib/storage/sheets';
+import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
 
-export async function POST(request: Request) {
+
+
+async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     const { employees } = body; // รับ Array ของพนักงาน
@@ -40,3 +42,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการอัปเดตข้อมูลพนักงาน' }, { status: 500 });
   }
 }
+export const POST = withStorage(handlePOST);

@@ -1,3 +1,4 @@
+import { currentVehicles } from '@/lib/current-vehicles';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
@@ -7,8 +8,9 @@ export async function GET(request: Request) {
   const code = params.get('code');
   if ((!vehicleId && !code) || (vehicleId || code || '').length > 200) return NextResponse.json({ error: 'รหัสรถไม่ถูกต้อง' }, { status: 400 });
   try {
-    const vehicle = await prisma.vehicle.findUnique({ where: vehicleId ? { vehicleId } : { qrCodeData: code! } });
-    if (!vehicle) return NextResponse.json({ error: 'ไม่พบรถยนต์คันนี้ในระบบ' }, { status: 404 });
+    const storedVehicle = await prisma.vehicle.findUnique({ where: vehicleId ? { vehicleId } : { qrCodeData: code! } });
+    if (!storedVehicle) return NextResponse.json({ error: 'ไม่พบรถยนต์คันนี้ในระบบ' }, { status: 404 });
+    const [vehicle] = await currentVehicles(storedVehicle.vehicleId);
     const [bookings, logs] = await Promise.all([
       prisma.reservation.findMany({ where: { vehicleId: vehicle.vehicleId, reservationStatus: { in: ['BOOKED', 'CHECKED_IN'] } }, include: { employee: true }, orderBy: [{ startDate: 'asc' }, { startTime: 'asc' }] }),
       prisma.checkInOutLog.findMany({ where: { vehicleId: vehicle.vehicleId, checkOutTime: null }, select: { logId: true, reservationId: true, mileageOut: true, checkInTime: true, employeeId: true, employee: true } }),

@@ -91,7 +91,7 @@ export default function ReportIssuePage() {
       const res = await fetch('/api/maintenance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId, vehicleId, mileage: parseInt(mileage), issueDesc })
+        body: JSON.stringify({ employeeId, vehicleId, mileage: Number(mileage), issueDesc })
       });
       
       if (res.ok) {
@@ -238,7 +238,7 @@ export default function ReportIssuePage() {
               <h3 className="font-bold text-slate-800 flex items-center gap-2"><span className="text-xl">0️⃣</span> รายละเอียดปัญหา</h3>
               <div>
                 <label className="block text-xs font-extrabold text-slate-700 mb-1">เลขไมล์ปัจจุบัน (กม.) *</label>
-                <input type="number" value={mileage} onChange={(e) => setMileage(e.target.value)} className="w-full p-3 rounded-xl border border-slate-400 bg-white outline-none focus:ring-2 focus:ring-red-500 font-extrabold text-slate-950 placeholder:text-slate-400 shadow-sm" placeholder="กรอกตัวเลขไมล์ปัจจุบัน" />
+                <input type="number" min="0" step="1" value={mileage} onChange={(e) => setMileage(e.target.value)} className="w-full p-3 rounded-xl border border-slate-400 bg-white outline-none focus:ring-2 focus:ring-red-500 font-extrabold text-slate-950 placeholder:text-slate-400 shadow-sm" placeholder="กรอกตัวเลขไมล์ปัจจุบัน" />
               </div>
               <div>
                 <label className="block text-xs font-extrabold text-slate-700 mb-1">อาการชำรุด / ปัญหาที่พบ *</label>

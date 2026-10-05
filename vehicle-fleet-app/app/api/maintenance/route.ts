@@ -1,3 +1,5 @@
+import { currentVehicles } from '@/lib/current-vehicles';
+import { parseMileage } from '@/lib/vehicle-mileage';
 import { withStorage } from '@/lib/storage/sheets';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
@@ -22,9 +24,13 @@ async function handlePOST(request: Request) {
     const body = await request.json();
     const { vehicleId, employeeId, issueDesc, mileage, requestDate } = body;
 
-    if (!vehicleId || !employeeId || !issueDesc || !mileage) {
+    const parsedMileage = parseMileage(mileage);
+    if (!vehicleId || !employeeId || !issueDesc || parsedMileage === null) {
       return NextResponse.json({ error: 'กรุณากรอกข้อมูลสำคัญให้ครบถ้วน' }, { status: 400 });
     }
+
+    const [vehicle] = await currentVehicles(vehicleId);
+    if (!vehicle) return NextResponse.json({ error: 'ไม่พบรถยนต์' }, { status: 404 });
 
     const yearSuffix = new Date().getFullYear().toString().slice(-2);
     const prefix = `R${yearSuffix}-`;
@@ -42,15 +48,15 @@ async function handlePOST(request: Request) {
     const nextNumStr = String(maxNum + 1).padStart(4, '0');
     const autoTicketNumber = `${prefix}${nextNumStr}`;
 
-    const newTicket = await prisma.maintenanceTicket.create({
+    const [newTicket] = await prisma.$transaction([prisma.maintenanceTicket.create({
       data: {
         ticketNumber: autoTicketNumber, vehicleId, employeeId, issueDesc,
-        mileage: parseInt(mileage), requestDate: requestDate ? new Date(requestDate) : new Date(),
+        mileage: parsedMileage, requestDate: requestDate ? new Date(requestDate) : new Date(),
         status: "รอตรวจสอบ"
       }
-    });
-
-    await prisma.vehicle.update({ where: { vehicleId }, data: { vehicleStatus: 'MAINTENANCE' } });
+    }), prisma.vehicle.update({ where: { vehicleId }, data: {
+      vehicleStatus: 'MAINTENANCE', currentMileage: Math.max(vehicle.currentMileage, parsedMileage),
+    } })]);
 
     return NextResponse.json({ success: true, data: newTicket }, { status: 201 });
   } catch (error: any) {
@@ -64,6 +70,14 @@ async function handlePUT(request: Request) {
     // 🌟 รับค่า shopName มาจากการพิมพ์เอง
     const { ticketId, status, shopId, shopName, vehicleId, ...workflowData } = body;
 
+    const ticket = await prisma.maintenanceTicket.findUnique({ where: { ticketId } });
+    if (!ticket) return NextResponse.json({ error: 'ไม่พบใบแจ้งซ่อม' }, { status: 404 });
+    if (workflowData.mileage !== undefined) {
+      const parsed = parseMileage(workflowData.mileage);
+      if (parsed === null) return NextResponse.json({ error: 'เลขไมล์ไม่ถูกต้อง' }, { status: 400 });
+      workflowData.mileage = parsed;
+    }
+    const [vehicle] = await currentVehicles(ticket.vehicleId);
     let finalShopId = shopId || null;
 
     // 🌟 ถ้ายูสเซอร์พิมพ์ชื่อร้านค้ามาเอง ระบบจะค้นหาว่ามีไหม ถ้าไม่มีจะสร้างให้ใหม่
@@ -85,15 +99,13 @@ async function handlePUT(request: Request) {
       else cleanedData[key] = workflowData[key];
     }
 
-    const updatedTicket = await prisma.maintenanceTicket.update({
-      where: { ticketId }, data: cleanedData
-    });
-
-    if (status === 'ปิดใบซ่อม' || status === 'ยกเลิกการซ่อม') {
-      if (vehicleId) {
-        await prisma.vehicle.update({ where: { vehicleId }, data: { vehicleStatus: 'AVAILABLE' } });
-      }
-    }
+    const [updatedTicket] = await prisma.$transaction([
+      prisma.maintenanceTicket.update({ where: { ticketId }, data: cleanedData }),
+      prisma.vehicle.update({ where: { vehicleId: ticket.vehicleId }, data: {
+        currentMileage: Math.max(vehicle.currentMileage, (status || ticket.status) === 'ยกเลิกการซ่อม' ? 0 : (workflowData.mileage ?? ticket.mileage)),
+        ...(['ปิดใบซ่อม', 'ยกเลิกการซ่อม'].includes(status) ? { vehicleStatus: 'AVAILABLE' } : {}),
+      } }),
+    ]);
 
     return NextResponse.json({ success: true, data: updatedTicket });
   } catch (error) {

@@ -1,3 +1,5 @@
+import { currentVehicles } from '@/lib/current-vehicles';
+import { vehicleAlerts } from '@/lib/vehicle-alerts';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
@@ -21,62 +23,9 @@ async function sendAlertsHandler() {
     }
 
     // 2. ดึงข้อมูลรถยนต์ทั้งหมดมาตรวจสอบสถานะ
-    const vehicles = await prisma.vehicle.findMany();
-    
-    // ตั้งค่าเวลาเป็นเที่ยงคืนเป๊ะๆ ของวันนี้ เพื่อการลบจำนวนวันที่แม่นยำ
+    const vehicles = await currentVehicles();
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const alertsList: any[] = [];
-
-    vehicles.forEach((vehicle: any) => {
-      // ตรวจสอบวันหมดอายุภาษี
-      const taxDateValue = vehicle.taxExpireDate || vehicle.taxExpiryDate || vehicle.taxDate || vehicle.registrationExpireDate;
-      
-      if (taxDateValue) {
-        const expiryDate = new Date(taxDateValue);
-        expiryDate.setHours(0, 0, 0, 0);
-        const diffTime = expiryDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) {
-          alertsList.push({ plate: vehicle.plateNumber, icon: '🔴', message: `ภาษีหมดอายุมาแล้ว ${Math.abs(diffDays)} วัน` });
-        } else if (diffDays <= 30) {
-          alertsList.push({ plate: vehicle.plateNumber, icon: '📅', message: `ภาษีจะหมดอายุในอีก ${diffDays} วัน` });
-        }
-      }
-
-      // ตรวจสอบเช็คระยะแบบ "จำนวนวัน"
-      const serviceDateValue = vehicle.nextServiceDate || vehicle.serviceDueDate || vehicle.maintenanceDate;
-      let serviceAlertTriggered = false;
-
-      if (serviceDateValue) {
-        const serviceDate = new Date(serviceDateValue);
-        serviceDate.setHours(0, 0, 0, 0);
-        const diffTime = serviceDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 0) {
-          alertsList.push({ plate: vehicle.plateNumber, icon: '🚨', message: `เกินกำหนดเช็คระยะมาแล้ว ${Math.abs(diffDays)} วัน` });
-          serviceAlertTriggered = true;
-        } else if (diffDays <= 30) {
-          alertsList.push({ plate: vehicle.plateNumber, icon: '🛠️', message: `จะถึงกำหนดเช็คระยะในอีก ${diffDays} วัน` });
-          serviceAlertTriggered = true;
-        }
-      }
-
-      // ตรวจสอบเช็คระยะแบบ "เลขไมล์" (ถ้าไม่ได้เตือนแบบวันไปแล้ว)
-      if (!serviceAlertTriggered && vehicle.currentMileage && vehicle.nextServiceMileage) {
-        if (vehicle.currentMileage >= vehicle.nextServiceMileage - 1000) {
-          const diff = vehicle.nextServiceMileage - vehicle.currentMileage;
-          if (diff <= 0) {
-             alertsList.push({ plate: vehicle.plateNumber, icon: '🚨', message: `เกินกำหนดเช็คระยะมาแล้ว ${Math.abs(diff)} กม.` });
-          } else {
-             alertsList.push({ plate: vehicle.plateNumber, icon: '🛠️', message: `อีก ${diff} กม. จะถึงกำหนดเช็คระยะ` });
-          }
-        }
-      }
-    });
+    const alertsList = vehicleAlerts(vehicles, today);
 
     // ถ้าไม่มีข้อมูลที่เข้าเกณฑ์เลย ค่อยส่งสถานะปกติ
     if (alertsList.length === 0) {
@@ -99,7 +48,7 @@ async function sendAlertsHandler() {
       <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #334155; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px;">
         <div style="background: #1e293b; padding: 20px; border-radius: 12px; text-align: center; color: #ffffff;">
           <h2 style="margin: 0; font-size: 1.5rem;">🔔 รายงานแจ้งเตือนระบบยานพาหนะ</h2>
-          <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #94a3b8;">ประจำวันที่ ${today.toLocaleDateString('th-TH')}</p>
+          <p style="margin: 5px 0 0 0; font-size: 0.85rem; color: #94a3b8;">ประจำวันที่ ${today.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}</p>
         </div>
         
         <p style="font-size: 1rem; font-weight: bold; margin-top: 24px;">เรียน ผู้ดูแลระบบ,</p>
@@ -132,7 +81,7 @@ async function sendAlertsHandler() {
     await transporter.sendMail({
       from: `"PEA Fleet Alert" <${process.env.SMTP_USER}>`,
       to: setting.alertEmail,
-      subject: `[แจ้งเตือน] พบยานพาหนะ ${alertsList.length} คัน ที่ต้องดำเนินการ - ${today.toLocaleDateString('th-TH')}`,
+      subject: `[แจ้งเตือน] พบยานพาหนะ ${alertsList.length} คัน ที่ต้องดำเนินการ - ${today.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' })}`,
       html: htmlContent,
     });
 

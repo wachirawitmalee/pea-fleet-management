@@ -1,3 +1,5 @@
+import { currentVehicles } from '@/lib/current-vehicles';
+import { parseMileage } from '@/lib/vehicle-mileage';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { withStorage } from '@/lib/storage/sheets';
@@ -13,14 +15,14 @@ async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     const { reservationId, type, remark } = body;
-    const mileage = Number(body.mileage);
-    if (!['IN', 'OUT'].includes(type) || body.mileage === '' || body.mileage == null || !Number.isSafeInteger(mileage) || mileage < 0) return NextResponse.json({ error: 'กรุณาระบุประเภทและเลขไมล์ให้ถูกต้อง' }, { status: 400 });
+    const mileage = parseMileage(body.mileage);
+    if (!['IN', 'OUT'].includes(type) || mileage === null) return NextResponse.json({ error: 'กรุณาระบุประเภทและเลขไมล์ให้ถูกต้อง' }, { status: 400 });
     const reservation = reservationId ? await prisma.reservation.findUnique({ where: { reservationId } }) : null;
     if (reservationId && !reservation) return NextResponse.json({ error: 'ไม่พบใบจอง' }, { status: 404 });
     const vehicleId = reservation?.vehicleId || body.vehicleId;
     const employeeId = reservation?.employeeId || body.employeeId;
     if (!vehicleId) return NextResponse.json({ error: 'กรุณาระบุรถยนต์' }, { status: 400 });
-    const vehicle = await prisma.vehicle.findUnique({ where: { vehicleId } });
+    const [vehicle] = await currentVehicles(vehicleId);
     if (!vehicle) return NextResponse.json({ error: 'ไม่พบรถยนต์' }, { status: 404 });
     if (type === 'IN') {
       if (reservation && reservation.reservationStatus !== 'BOOKED') return NextResponse.json({ error: 'ใบจองนี้ไม่สามารถรับรถได้' }, { status: 409 });

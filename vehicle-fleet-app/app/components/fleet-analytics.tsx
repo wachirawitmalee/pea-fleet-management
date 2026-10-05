@@ -16,11 +16,7 @@ export default function FleetAnalyticsPanel({ data }: { data: FleetAnalytics }) 
       <h3 className="font-bold text-slate-800 mb-5">แนวโน้มค่าใช้จ่าย 6 เดือน (บาท)</h3>
       {data.months.some(m => m.fuelCost || m.maintenanceCost) ? <div className="h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={data.months} margin={{ left: 5, right: 8 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="month" tick={{ fontSize: 11 }} /><YAxis width={65} tick={{ fontSize: 11 }} /><Tooltip /><Legend /><Bar dataKey="fuelCost" name="ค่าเติมน้ำมัน" fill="#6366f1" radius={[4, 4, 0, 0]} /><Bar dataKey="maintenanceCost" name="ค่าซ่อมตามเดือนแจ้ง" fill="#f59e0b" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div> : <p className="py-14 text-center text-slate-500">ยังไม่มีรายการค่าใช้จ่ายในช่วง 6 เดือนนี้</p>}
     </div>
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      <h3 className="font-bold text-slate-800 p-5">ค่าใช้จ่ายรายคัน เรียงตามค่าเติมน้ำมัน</h3>
-      <div className="overflow-x-auto"><table className="w-full text-sm text-left whitespace-nowrap"><thead className="bg-slate-50 text-slate-600"><tr>{['ทะเบียน', 'เที่ยวที่คืนแล้ว', 'ระยะทาง (กม.)', 'น้ำมัน (ลิตร)', 'ค่าเติม (บาท)', 'ค่าซ่อม (บาท)', 'ค่าเติม/กม.*'].map(label => <th key={label} className="px-5 py-3 font-semibold">{label}</th>)}</tr></thead><tbody>{data.vehicles.map(v => <tr key={v.vehicleId} className="border-t border-slate-100"><th className="px-5 py-4 text-slate-800">{v.plateNumber}</th>{[v.trips, v.distance, v.liters, v.fuelCost, v.maintenanceCost, v.fuelCostPerKm].map((value, i) => <td key={i} className="px-5 py-4 text-slate-600">{fmt(value)}</td>)}</tr>)}{!data.vehicles.length && <tr><td colSpan={7} className="p-8 text-center text-slate-500">ยังไม่มีข้อมูลรถยนต์</td></tr>}</tbody></table></div>
-      <p className="p-5 text-xs leading-relaxed text-slate-500">* ค่าเติมน้ำมันหารด้วยระยะทางที่คืนรถในเดือนเดียวกัน เป็นค่าใช้จ่ายโดยประมาณ ไม่ใช่อัตราสิ้นเปลืองจริง เพราะน้ำมันอาจใช้ข้ามเดือน ค่าซ่อมไม่รวมรายการยกเลิกและรายการที่ยังไม่ระบุราคา</p>
-      {data.invalidTrips > 0 && <p role="status" className="px-5 pb-5 text-sm text-amber-700">มี {data.invalidTrips} เที่ยวที่เลขไมล์ไม่ครบหรือผิดปกติ จึงไม่นำมารวมระยะทาง</p>}
-    </div>
+    <p className="text-xs text-slate-500">ค่าซ่อมไม่รวมรายการยกเลิกและรายการที่ยังไม่ระบุราคา</p>
+    {data.invalidTrips > 0 && <p role="status" className="text-sm text-amber-700">มี {data.invalidTrips} เที่ยวที่เลขไมล์ไม่ครบหรือผิดปกติ จึงไม่นำมารวมระยะทาง</p>}
   </section>;
 }

@@ -1,3 +1,5 @@
+import { currentVehicles } from '@/lib/current-vehicles';
+import { vehicleAlerts } from '@/lib/vehicle-alerts';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 import { fleetAnalytics } from '@/lib/analytics';
@@ -11,7 +13,7 @@ export async function GET(request: Request) {
     const month = new URL(request.url).searchParams.get('month') || bangkokMonth(new Date());
     if (!/^20\d{2}-(0[1-9]|1[0-2])$/.test(month)) return NextResponse.json({ error: 'เดือนไม่ถูกต้อง' }, { status: 400 });
     const [vehicles, reservations, fuel, logs, repairs] = await Promise.all([
-      prisma.vehicle.findMany(),
+      currentVehicles(),
       prisma.reservation.findMany({ include: { employee: true, vehicle: true } }),
       prisma.fuelRecord.findMany({ select: { date: true, vehicleId: true, quantity: true, totalAmount: true } }),
       prisma.checkInOutLog.findMany({ select: { reservationId: true, vehicleId: true, checkOutTime: true, mileageOut: true, mileageIn: true } }),
@@ -21,44 +23,7 @@ export async function GET(request: Request) {
     const analytics = fleetAnalytics(vehicles, fuel, logs, repairs, month);
 
     const now = new Date();
-    const alerts: { level: string; icon: string; message: string }[] = [];
-
-    // 🌟 ระบบแจ้งเตือนอัจฉริยะ (Alerts Logic)
-    vehicles.forEach(v => {
-      const plate = v.plateNumber;
-      
-      // 1. เช็คภาษีรถยนต์ (taxExpireDate)
-      if (v.taxExpireDate) {
-        const diffTime = new Date(v.taxExpireDate).getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays < 0) {
-          alerts.push({ level: 'danger', icon: '⛔', message: `รถทะเบียน ${plate} ภาษีขาดต่ออายุ!` });
-        } else if (diffDays <= 30) {
-          alerts.push({ level: 'warning', icon: '📅', message: `รถทะเบียน ${plate} ภาษีจะหมดอายุในอีก ${diffDays} วัน` });
-        }
-      }
-
-      // 2. เช็คระยะไมล์เช็คศูนย์ (nextCheckMileage vs currentMileage)
-      if (v.nextCheckMileage && v.currentMileage !== undefined) {
-        const left = v.nextCheckMileage - v.currentMileage;
-        if (left <= 0) {
-          alerts.push({ level: 'danger', icon: '🔧', message: `รถทะเบียน ${plate} เกินระยะที่ต้องเข้าศูนย์/เช็คช่วงล่างแล้ว!` });
-        } else if (left <= 1000) {
-          alerts.push({ level: 'info', icon: '🛠️', message: `รถทะเบียน ${plate} อีก ${left.toLocaleString()} กม. จะถึงกำหนดเช็คระยะ` });
-        }
-      }
-
-      // 3. เช็ควันที่ต้องเข้าศูนย์ (nextCheckDate)
-      if (v.nextCheckDate) {
-        const diffTime = new Date(v.nextCheckDate).getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays < 0) {
-           alerts.push({ level: 'danger', icon: '🔧', message: `รถทะเบียน ${plate} เลยกำหนดเข้าเช็คระยะตามวันที่แล้ว!` });
-        } else if (diffDays <= 15) {
-           alerts.push({ level: 'warning', icon: '🛠️', message: `รถทะเบียน ${plate} จะถึงกำหนดเช็คระยะในอีก ${diffDays} วัน` });
-        }
-      }
-    });
+    const alerts = vehicleAlerts(vehicles, now);
 
     // คำนวณสถิติภาพรวม
     const totalVehicles = vehicles.length;

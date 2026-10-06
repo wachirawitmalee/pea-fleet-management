@@ -102,7 +102,9 @@ async function handlePUT(request: Request) {
     const [updatedTicket] = await prisma.$transaction([
       prisma.maintenanceTicket.update({ where: { ticketId }, data: cleanedData }),
       prisma.vehicle.update({ where: { vehicleId: ticket.vehicleId }, data: {
-        currentMileage: Math.max(vehicle.currentMileage, (status || ticket.status) === 'ยกเลิกการซ่อม' ? 0 : (workflowData.mileage ?? ticket.mileage)),
+        // Saving workflow/status alone must not replay an old, incorrect reading.
+        ...(workflowData.mileage !== undefined && workflowData.mileage !== ticket.mileage && (status || ticket.status) !== 'ยกเลิกการซ่อม'
+          ? { currentMileage: Math.max(vehicle.currentMileage, workflowData.mileage) } : {}),
         ...(['ปิดใบซ่อม', 'ยกเลิกการซ่อม'].includes(status) ? { vehicleStatus: 'AVAILABLE' } : {}),
       } }),
     ]);

@@ -48,7 +48,7 @@ async function handlePUT(request: Request) {
     const [existing] = await currentVehicles(vehicleId);
     if (!existing) return NextResponse.json({ error: 'ไม่พบรถยนต์' }, { status: 404 });
     const parsedMileage = currentMileage == null ? existing.currentMileage : parseMileage(currentMileage);
-    if (parsedMileage === null || parsedMileage < existing.currentMileage) return NextResponse.json({ error: 'เลขไมล์ต้องเป็นจำนวนเต็ม และไม่น้อยกว่าเลขไมล์ล่าสุด ' + existing.currentMileage + ' กม. กรุณารีเฟรชข้อมูล' }, { status: 400 });
+    if (parsedMileage === null) return NextResponse.json({ error: 'เลขไมล์ต้องเป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป' }, { status: 400 });
     const vehicle = await prisma.vehicle.update({
       where: { vehicleId },
       data: {

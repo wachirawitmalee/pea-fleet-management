@@ -216,7 +216,7 @@ export default function AdminVehiclesPage() {
                     <input type="checkbox" name="isBookable" checked={formData.isBookable} onChange={handleFormChange} className="w-6 h-6 text-indigo-600 rounded focus:ring-indigo-500" />
                     <div><p className="font-extrabold text-indigo-900 text-lg">อนุญาตให้พนักงานจองรถคันนี้ล่วงหน้าได้</p></div>
                   </label>
-                  <div><label className="block text-xs font-extrabold text-slate-700 mb-1">เลขไมล์ปัจจุบัน (กม.)</label><input type="number" name="currentMileage" min="0" step="1" value={formData.currentMileage} onChange={handleFormChange} className="w-full p-3 rounded-xl border border-slate-400 bg-white outline-none focus:border-indigo-600 font-extrabold text-indigo-900 text-lg" /></div>
+                  <div><label className="block text-xs font-extrabold text-slate-700 mb-1">เลขไมล์ปัจจุบัน (กม.) — แอดมินแก้เพิ่มหรือลดได้</label><input type="number" name="currentMileage" min="0" step="1" value={formData.currentMileage} onChange={handleFormChange} className="w-full p-3 rounded-xl border border-slate-400 bg-white outline-none focus:border-indigo-600 font-extrabold text-indigo-900 text-lg" /></div>
                 </div>
 
                 <div className="bg-amber-50 p-5 rounded-2xl border border-amber-300 space-y-4">

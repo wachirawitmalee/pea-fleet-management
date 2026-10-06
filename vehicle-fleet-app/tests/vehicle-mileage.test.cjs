@@ -17,7 +17,7 @@ test('tax uses Bangkok calendar date and service checks both distance and date i
  assert.equal(a.length,3);assert.ok(a.some(x=>x.message.includes('ต่อภาษีวันนี้')));assert.ok(a.some(x=>x.message.includes('15 วัน')));assert.ok(a.some(x=>x.message.includes('ตามเลขไมล์แล้ว')));
  assert.equal(vehicleAlerts([{...v,currentMileage:8999,taxExpireDate:null,nextCheckDate:null}]).length,0);
 });
-test('real handlers persist repairs, check-in/out and admin odometers; stale edits and invalid mileage cannot overwrite',async()=>{
+test('real handlers persist repairs, check-in/out and admin odometers; admin corrections persist despite larger history, while employee checks remain',async()=>{
  process.env.DATA_BACKEND='google-sheets';process.env.GOOGLE_STORAGE_SECRET='test-secret-'.repeat(4);process.env.GOOGLE_APPS_SCRIPT_URL='https://script.google.com/macros/s/test/exec';
  const {emptyTables,operate}=require('../lib/storage/records.ts');let stored=emptyTables(),version=1;
  operate(stored,'employee','create',{data:{employeeId:'001',fullName:'Test',position:'Driver',department:'Fleet',workPlace:'Office'}});
@@ -31,8 +31,14 @@ test('real handlers persist repairs, check-in/out and admin odometers; stale edi
   r=await trips.POST(req({type:'IN',vehicleId:'v',employeeId:'001',mileage:260}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,260);
   r=await trips.POST(req({type:'OUT',vehicleId:'v',mileage:300}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,300);
   r=await vehicles.PUT(req({...stored.vehicle[0],currentMileage:400}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,400);
-  r=await vehicles.PUT(req({...stored.vehicle[0],currentMileage:350}));assert.equal(r.status,400);assert.equal(stored.vehicle[0].currentMileage,400);
-  r=await repairs.POST(req({vehicleId:'v',employeeId:'001',issueDesc:'old report',mileage:150}));assert.equal(r.status,201);assert.equal(stored.vehicle[0].currentMileage,400);
+  r=await vehicles.PUT(req({...stored.vehicle[0],currentMileage:180}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,180);
+  assert.equal((await (await vehicles.GET()).json())[0].currentMileage,180);
+  r=await repairs.PUT(req({ticketId:ticket.ticketId,status:'ปิดใบซ่อม',mileage:250}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,180);
+  r=await trips.POST(req({type:'IN',vehicleId:'v',employeeId:'001',mileage:170}));assert.equal(r.status,400);
+  r=await trips.POST(req({type:'IN',vehicleId:'v',employeeId:'001',mileage:190}));assert.equal(r.status,200);
+  r=await trips.POST(req({type:'OUT',vehicleId:'v',mileage:195}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,195);
+  r=await vehicles.PUT(req({...stored.vehicle[0],currentMileage:-1}));assert.equal(r.status,400);assert.equal(stored.vehicle[0].currentMileage,195);
+  r=await repairs.POST(req({vehicleId:'v',employeeId:'001',issueDesc:'old report',mileage:150}));assert.equal(r.status,201);assert.equal(stored.vehicle[0].currentMileage,195);
   const count=stored.maintenanceTicket.length;r=await repairs.POST(req({vehicleId:'v',employeeId:'001',issueDesc:'invalid',mileage:'2.5'}));assert.equal(r.status,400);assert.equal(stored.maintenanceTicket.length,count);
  }finally{global.fetch=originalFetch}
 });

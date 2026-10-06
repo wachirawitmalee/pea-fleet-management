@@ -27,8 +27,9 @@ test('real handlers persist repairs, check-in/out and admin odometers; admin cor
  const req=(body)=>new Request('http://localhost',{method:'POST',body:JSON.stringify(body)});
  try{
   let r=await repairs.POST(req({vehicleId:'v',employeeId:'001',issueDesc:'Test',mileage:200}));assert.equal(r.status,201);const ticket=(await r.json()).data;assert.equal(stored.vehicle[0].currentMileage,200);
-  r=await repairs.PUT(req({ticketId:ticket.ticketId,status:'ปิดใบซ่อม',vehicleId:'wrong',mileage:250}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,250);assert.equal(stored.vehicle[0].vehicleStatus,'AVAILABLE');
+  r=await repairs.PUT(req({ticketId:ticket.ticketId,status:'เบิกจ่าย',vehicleId:'wrong',mileage:250}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,250);assert.equal(stored.vehicle[0].vehicleStatus,'AVAILABLE');
   r=await trips.POST(req({type:'IN',vehicleId:'v',employeeId:'001',mileage:260}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,260);
+  r=await repairs.PUT(req({ticketId:ticket.ticketId,status:'เบิกจ่าย'}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].vehicleStatus,'IN_USE');
   r=await trips.POST(req({type:'OUT',vehicleId:'v',mileage:300}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,300);
   r=await vehicles.PUT(req({...stored.vehicle[0],currentMileage:400}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,400);
   r=await vehicles.PUT(req({...stored.vehicle[0],currentMileage:180}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,180);
@@ -39,6 +40,7 @@ test('real handlers persist repairs, check-in/out and admin odometers; admin cor
   r=await trips.POST(req({type:'OUT',vehicleId:'v',mileage:195}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].currentMileage,195);
   r=await vehicles.PUT(req({...stored.vehicle[0],currentMileage:-1}));assert.equal(r.status,400);assert.equal(stored.vehicle[0].currentMileage,195);
   r=await repairs.POST(req({vehicleId:'v',employeeId:'001',issueDesc:'old report',mileage:150}));assert.equal(r.status,201);assert.equal(stored.vehicle[0].currentMileage,195);
+  r=await repairs.PUT(req({ticketId:ticket.ticketId,status:'เบิกจ่าย'}));assert.equal(r.status,200);assert.equal(stored.vehicle[0].vehicleStatus,'MAINTENANCE');
   const count=stored.maintenanceTicket.length;r=await repairs.POST(req({vehicleId:'v',employeeId:'001',issueDesc:'invalid',mileage:'2.5'}));assert.equal(r.status,400);assert.equal(stored.maintenanceTicket.length,count);
  }finally{global.fetch=originalFetch}
 });

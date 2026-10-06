@@ -248,7 +248,7 @@ export default function MaintenanceManagementPage() {
                     <option value="ขออนุมัติหลักการ">⏳ ขออนุมัติหลักการ</option>
                     <option value="นำรถเข้าร้าน / อู่">🔧 นำรถเข้าร้าน / อู่</option>
                     <option value="อยู่ระหว่างซ่อม">🔧 อยู่ระหว่างซ่อม</option>
-                    <option value="เบิกจ่าย">💸 เบิกจ่าย</option>
+                    <option value="เบิกจ่าย">💸 เบิกจ่าย (รถพร้อมใช้หากไม่มีงานซ่อมอื่น)</option>
                     <option value="ปิดใบซ่อม">🏁 ปิดใบซ่อม (ปลดล็อกรถยนต์)</option>
                     <option value="ยกเลิกการซ่อม">❌ ยกเลิกการซ่อม (ปลดล็อกรถยนต์)</option>
                   </select>

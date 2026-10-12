@@ -226,6 +226,7 @@ export default function ReservationPage() {
               <div><label className="block text-xs font-bold text-slate-600 mb-1">วัตถุประสงค์ (ถ้ามี)</label><input type="text" value={purpose} onChange={(e) => setPurpose(e.target.value)} className="w-full p-3 rounded-xl border border-slate-300 bg-white font-bold text-slate-900 shadow-sm outline-none focus:ring-2 focus:ring-purple-500" placeholder="เช่น ติดตั้งมิเตอร์ใหม่" /></div>
             </div>
 
+            <p className="mt-5 text-sm text-amber-800 bg-amber-50 rounded-xl p-3">หากยังไม่รับรถหลังเลยเวลาเริ่มจอง 30 นาที ระบบจะยกเลิกคิวอัตโนมัติ เพื่อเปิดให้ผู้อื่นจองได้</p>
             <button type="submit" className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-xl mt-6 text-lg">ยืนยันการจองรถ</button>
           </form>
         </div>

@@ -1,3 +1,4 @@
+import { bookingTime } from '@/lib/fleet-time';
 import { currentVehicles } from '@/lib/current-vehicles';
 import { parseMileage } from '@/lib/vehicle-mileage';
 import { NextResponse } from 'next/server';
@@ -25,6 +26,7 @@ async function handlePOST(request: Request) {
     const [vehicle] = await currentVehicles(vehicleId);
     if (!vehicle) return NextResponse.json({ error: 'ไม่พบรถยนต์' }, { status: 404 });
     if (type === 'IN') {
+      if (reservation && Date.now() >= bookingTime(reservation.startDate, reservation.startTime).getTime() + 30 * 60000) return NextResponse.json({ error: 'คิวหมดอายุ เนื่องจากเลยเวลารับรถ 30 นาที กรุณาจองใหม่' }, { status: 409 });
       if (reservation && reservation.reservationStatus !== 'BOOKED') return NextResponse.json({ error: 'ใบจองนี้ไม่สามารถรับรถได้' }, { status: 409 });
       const employee = employeeId ? await prisma.employee.findUnique({ where: { employeeId } }) : null;
       if (!employee || employee.status !== 'ACTIVE') return NextResponse.json({ error: 'ไม่พบพนักงานที่พร้อมใช้งาน' }, { status: 400 });

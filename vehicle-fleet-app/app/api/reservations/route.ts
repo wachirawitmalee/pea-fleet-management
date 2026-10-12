@@ -1,3 +1,4 @@
+import { expireBookings } from '@/lib/expire-bookings';
 import { withStorage } from '@/lib/storage/sheets';
 import { bookingTime } from '@/lib/fleet-time';
 import { prisma } from '@/lib/prisma';
@@ -35,6 +36,7 @@ async function handlePOST(request: Request) {
       return NextResponse.json({ error: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน' }, { status: 400 });
     }
 
+    await expireBookings();
     const existingReservations = await prisma.reservation.findMany({
       where: { vehicleId: vehicleId, reservationStatus: { in: ['BOOKED', 'CHECKED_IN'] } }
     });

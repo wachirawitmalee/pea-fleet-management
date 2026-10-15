@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { bookingStatuses } from '@/lib/booking-status';
 
 // 🌟 1. Import Helper Function มาใช้งาน (ใช้แค่ showError สำหรับดักจับปัญหาการดึงข้อมูล)
 import { showError } from '@/lib/alert';
@@ -101,7 +102,7 @@ export default function AdminReservationsPage() {
                             ${r.reservationStatus === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 
                               r.reservationStatus === 'BOOKED' ? 'bg-blue-100 text-blue-800 border-blue-300' : 
                               'bg-amber-100 text-amber-800 border-amber-300'}`}>
-                            {r.reservationStatus}
+                            {bookingStatuses[r.reservationStatus as keyof typeof bookingStatuses]?.label || r.reservationStatus}
                           </span>
                         </td>
                         <td className="p-4 text-center">

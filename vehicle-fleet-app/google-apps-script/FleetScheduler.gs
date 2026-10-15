@@ -73,7 +73,7 @@ function fleetTick() {
     const expired = fleetExpired_(bookings, tables.checkInOutLog, now);
     if (expired.length) {
       const ids = new Set(expired.map(b => b.reservationId));
-      bookings.forEach(b => { if (ids.has(b.reservationId)) b.reservationStatus = 'CANCELLED'; });
+      bookings.forEach(b => { if (ids.has(b.reservationId)) b.reservationStatus = 'EXPIRED'; });
       // Uses the same lock as the web app; its CAS version rejects stale writes.
       fleetWriteReservations_(id, bookings);
       expired.forEach(b => fleetQueue_(properties, 'cancel:' + b.reservationId, 'ยกเลิกคิวอัตโนมัติ: ไม่รับรถภายใน 30 นาที', fleetBookingDetails_(b, tables)));

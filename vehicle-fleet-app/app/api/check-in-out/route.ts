@@ -1,3 +1,4 @@
+import { recordLateUsage } from '@/lib/late-usage';
 import { bookingTime } from '@/lib/fleet-time';
 import { currentVehicles } from '@/lib/current-vehicles';
 import { parseMileage } from '@/lib/vehicle-mileage';
@@ -15,6 +16,7 @@ export async function GET() {
 async function handlePOST(request: Request) {
   try {
     const body = await request.json();
+    if (body.type === 'LATE') return recordLateUsage(body);
     const { reservationId, type, remark } = body;
     const mileage = parseMileage(body.mileage);
     if (!['IN', 'OUT'].includes(type) || mileage === null) return NextResponse.json({ error: 'กรุณาระบุประเภทและเลขไมล์ให้ถูกต้อง' }, { status: 400 });
@@ -47,7 +49,7 @@ async function handlePOST(request: Request) {
     if (mileage < active.mileageOut || mileage < vehicle.currentMileage) return NextResponse.json({ error: 'เลขไมล์คืนรถต้องไม่น้อยกว่าเลขไมล์ขาไปและเลขไมล์ปัจจุบัน' }, { status: 400 });
     const photo = await storePhoto(body.photoUrl);
     const [log] = await prisma.$transaction([
-      prisma.checkInOutLog.update({ where: { logId: active.logId }, data: { mileageIn: mileage, photoInUrl: photo, checkOutTime: new Date(), remark: remark || null } }),
+      prisma.checkInOutLog.update({ where: { logId: active.logId }, data: { mileageIn: mileage, photoInUrl: photo, checkOutTime: new Date(), remark: [active.remark, remark].filter(Boolean).join("\n") || null } }),
       prisma.vehicle.update({ where: { vehicleId }, data: { currentMileage: mileage, vehicleStatus: 'AVAILABLE' } }),
       ...(reservationId ? [prisma.reservation.update({ where: { reservationId }, data: { reservationStatus: 'COMPLETED' } })] : []),
     ]);

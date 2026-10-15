@@ -9,7 +9,7 @@ export async function expireBookings(now = new Date()) {
   // Booking cancellation releases only the time slot. It must never change a
   // vehicle that is being used or undergoing maintenance to AVAILABLE.
   if (ids.length) await prisma.$transaction(ids.map(reservationId => prisma.reservation.update({
-    where: { reservationId }, data: { reservationStatus: 'CANCELLED' },
+    where: { reservationId }, data: { reservationStatus: 'EXPIRED' },
   })));
   return ids;
 }

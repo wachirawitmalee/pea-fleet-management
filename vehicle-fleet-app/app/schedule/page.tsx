@@ -1,4 +1,6 @@
 "use client";
+import { bookingStatuses, calendarStatus } from '@/lib/booking-status';
+
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -17,6 +19,8 @@ export default function ScheduleCalendarPage() {
 
   useEffect(() => {
     fetchReservations();
+    const refresh = window.setInterval(fetchReservations, 60000);
+    return () => window.clearInterval(refresh);
   }, []);
 
   const fetchReservations = async () => {
@@ -28,16 +32,18 @@ export default function ScheduleCalendarPage() {
         const calendarEvents = data.map((res: any) => {
           const startDateTime = `${res.startDate.split('T')[0]}T${res.startTime}:00`;
           const endDateTime = `${res.endDate.split('T')[0]}T${res.endTime}:00`;
+          const status = bookingStatuses[calendarStatus(res, !!res.checkInOutLog)];
 
           return {
             id: res.reservationId,
-            title: `${res.vehicle.brand} (${res.vehicle.plateNumber}) - ${res.employee.fullName}`,
+            title: `[${status.label}] ${res.vehicle.brand} (${res.vehicle.plateNumber}) - ${res.employee.fullName}`,
             start: startDateTime,
             end: endDateTime,
-            backgroundColor: '#f3e8ff',
-            borderColor: '#d8b4fe',
-            textColor: '#4c1d95',
+            backgroundColor: status.background,
+            borderColor: status.background,
+            textColor: status.color,
             extendedProps: {
+              statusLabel: status.label,
               purpose: res.purpose,
               destination: res.destination
             }
@@ -58,6 +64,7 @@ export default function ScheduleCalendarPage() {
 
   const handleEventClick = (clickInfo: any) => {
     const event = clickInfo.event;
+    const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
     
     // 🌟 3. ตรงนี้ยังคงใช้ Swal.fire แบบเดิม เพราะมีการจัด Layout HTML ที่สวยงามเฉพาะเจาะจงอยู่แล้วครับ
     Swal.fire({
@@ -67,7 +74,7 @@ export default function ScheduleCalendarPage() {
           
           <div style="margin-bottom: 16px; border-bottom: 2px dashed #cbd5e1; padding-bottom: 16px;">
             <p style="margin: 0 0 4px 0; font-size: 0.85rem; color: #64748b; font-weight: 600;">ผู้จอง และ รถยนต์ที่ใช้</p>
-            <p style="margin: 0; font-size: 1.05rem; color: #0f172a; font-weight: 700;">${event.title}</p>
+            <p style="margin: 0; font-size: 1.05rem; color: #0f172a; font-weight: 700;">${escape(event.title)}</p>
           </div>
           
           <div style="display: flex; gap: 12px; margin-bottom: 16px;">
@@ -83,13 +90,13 @@ export default function ScheduleCalendarPage() {
           
           <div style="margin-bottom: 16px;">
             <p style="margin: 0 0 4px 0; font-size: 0.85rem; color: #64748b; font-weight: 600;">📍 สถานที่ปลายทาง</p>
-            <p style="margin: 0; font-size: 1rem; color: #0f172a; font-weight: 600;">${event.extendedProps.destination}</p>
+            <p style="margin: 0; font-size: 1rem; color: #0f172a; font-weight: 600;">${escape(event.extendedProps.destination)}</p>
           </div>
           
           <div>
             <p style="margin: 0 0 6px 0; font-size: 0.85rem; color: #64748b; font-weight: 600;">🎯 วัตถุประสงค์การใช้งาน</p>
             <p style="margin: 0; font-size: 0.95rem; background: #f3e8ff; padding: 12px; border-radius: 12px; color: #4c1d95; font-weight: 600; border: 1px solid #e9d5ff;">
-              ${event.extendedProps.purpose}
+              ${escape(event.extendedProps.purpose)}
             </p>
           </div>
         </div>
@@ -128,6 +135,7 @@ export default function ScheduleCalendarPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+<div className="flex flex-wrap gap-3 mb-5" aria-label="สีสถานะการจอง">{Object.entries(bookingStatuses).map(([key, status]) => <span key={key} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700"><span className="w-4 h-4 rounded" style={{ backgroundColor: status.background }} />{status.label}</span>)}</div>
         <div className="bg-white/80 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
           {isLoading ? (
             <div className="flex flex-col justify-center items-center h-[500px] gap-4">
@@ -151,6 +159,7 @@ export default function ScheduleCalendarPage() {
                   day: 'วัน'
                 }}
                 locale="th"
+                eventDisplay="block"
                 events={events}
                 eventClick={handleEventClick}
                 height="auto"
@@ -191,13 +200,12 @@ export default function ScheduleCalendarPage() {
 
         /* บังคับสีในป้ายการจอง */
         .fc-event-title, .fc-event-time, .fc-event-main {
-          color: #4c1d95 !important;
+          color: inherit;
           font-weight: 700 !important;
         }
         
         .fc-event {
-          background-color: #f3e8ff !important;
-          border: 1px solid #d8b4fe !important;
+
           cursor: pointer;
           border-radius: 6px;
           padding: 4px 6px;
@@ -216,7 +224,7 @@ export default function ScheduleCalendarPage() {
         .fc .fc-button-primary:not(:disabled).fc-button-active, 
         .fc .fc-button-primary:not(:disabled):active {
           background-color: #9333ea !important;
-          border-color: #7e22ce !important;
+          border-color: inherit;
           color: white !important;
         }
         .fc .fc-toolbar-title {

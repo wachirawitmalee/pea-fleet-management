@@ -32,14 +32,14 @@ export async function GET(request: Request) {
     const totalReservations = reservations.length;
 
     const deptCounts: Record<string, number> = {};
-    reservations.filter(r => r.reservationStatus !== 'CANCELLED').forEach(r => {
+    reservations.filter(r => !['CANCELLED', 'EXPIRED'].includes(r.reservationStatus)).forEach(r => {
       const dept = r.employee.department || 'ไม่ระบุแผนก';
       deptCounts[dept] = (deptCounts[dept] || 0) + 1;
     });
     const topDepartments = Object.entries(deptCounts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5);
 
     const vehicleCounts: Record<string, number> = {};
-    reservations.filter(r => r.reservationStatus !== 'CANCELLED').forEach(r => {
+    reservations.filter(r => !['CANCELLED', 'EXPIRED'].includes(r.reservationStatus)).forEach(r => {
       const name = `${r.vehicle.plateNumber}`;
       vehicleCounts[name] = (vehicleCounts[name] || 0) + 1;
     });

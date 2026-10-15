@@ -60,7 +60,7 @@ export function validateTables(tables: Tables) {
         if (field.type === 'Boolean' && typeof value !== 'boolean') throw new Error(`Invalid boolean: ${field.name}`);
         if (field.type === 'DateTime' && (!(value instanceof Date) || !Number.isFinite(value.getTime()))) throw new Error(`Invalid date: ${field.name}`);
         if (field.type === 'Role' && !['USER', 'FLEET_ADMIN', 'SYSTEM_ADMIN'].includes(value)) throw new Error('Invalid role');
-        if (field.type === 'ReserveStatus' && !['BOOKED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED'].includes(value)) throw new Error('Invalid reservation status');
+        if (field.type === 'ReserveStatus' && !['BOOKED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED', 'EXPIRED'].includes(value)) throw new Error('Invalid reservation status');
         if (field.isId || field.isUnique) {
           if (seen.has(value)) throw new Error(`Duplicate ${model.name}.${field.name}`);
           seen.add(value);

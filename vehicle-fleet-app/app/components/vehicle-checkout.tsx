@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { vehicleLookup } from '@/lib/vehicle-qr';
+import { lateUsageForm } from '@/lib/late-usage-form';
+import { bookingStatuses } from '@/lib/booking-status';
 import { preparePhoto } from '@/lib/prepare-photo';
 import Swal from 'sweetalert2';
 import { Scanner } from '@yudiel/react-qr-scanner';
@@ -107,8 +109,8 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
           ` : ''}
 
           <div style="margin-bottom: 12px;">
-            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">📸 ถ่ายรูปหน้าปัดรถ</label>
-            <input id="swal-photo" type="file" accept="image/*" capture="environment" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 0.85rem;" />
+            <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #475569; margin-bottom: 6px;">📸 ถ่ายรูปหรือเลือกจากอัลบั้ม</label>
+            <input id="swal-photo" type="file" accept="image/*" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 0.85rem;" />
           </div>
 
           ${type === 'OUT' ? `
@@ -234,10 +236,11 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
                     <div key={b.reservationId} className="p-5 rounded-2xl border-2 border-slate-100 bg-slate-50/50">
                       <div className="flex justify-between items-start mb-4">
                         <div><p className="font-bold text-slate-800 text-lg">{b.employee.fullName}</p><p className="text-sm text-slate-500 mt-1">📍 {b.destination}</p></div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${b.reservationStatus === 'BOOKED' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>{b.reservationStatus === 'BOOKED' ? 'รอรับรถ' : 'กำลังใช้งาน'}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${b.reservationStatus === 'BOOKED' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>{bookingStatuses[(b.displayStatus || b.reservationStatus) as keyof typeof bookingStatuses]?.label}</span>
                       </div>
                       <div className="pt-4 border-t border-slate-200 flex justify-end">
-                        {b.reservationStatus === 'BOOKED' && (<button onClick={() => handleAction(b, 'IN')} className="w-full sm:w-auto bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-md">🔓 รับรถ (Check-in)</button>)}
+                        {b.reservationStatus === 'BOOKED' && !b.canRecordLate && (<button onClick={() => handleAction(b, 'IN')} className="w-full sm:w-auto bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-md">🔓 รับรถ (Check-in)</button>)}
+                        {b.canRecordLate && (<button onClick={async () => { if (await lateUsageForm(b)) { await showSuccess('บันทึกการใช้งานแล้ว'); await handleScanQR('vehicle:' + b.vehicleId); } }} className="w-full sm:w-auto bg-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-md">บันทึกการใช้รถจริงของวันนี้</button>)}
                         {b.reservationStatus === 'CHECKED_IN' && (<button onClick={() => handleAction(b, 'OUT')} className="w-full sm:w-auto bg-rose-500 text-white px-6 py-3 rounded-xl font-bold shadow-md">🔒 คืนรถ (Check-out)</button>)}
                       </div>
                     </div>

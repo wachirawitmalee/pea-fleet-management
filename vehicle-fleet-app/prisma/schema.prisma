@@ -186,6 +186,7 @@ enum ReserveStatus {
   CHECKED_IN
   COMPLETED
   CANCELLED
+  EXPIRED
 }
 
 model FuelRecord {

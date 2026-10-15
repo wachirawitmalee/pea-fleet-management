@@ -80,7 +80,7 @@ export default function ReservationPage() {
     const newEnd = new Date(`${endDate}T${endTime}`);
 
     const isOverlapping = allReservations.some(res => {
-      if (res.vehicleId !== vId || res.reservationStatus === 'COMPLETED' || res.reservationStatus === 'CANCELLED') return false;
+      if (res.vehicleId !== vId || res.reservationStatus === 'COMPLETED' || ['CANCELLED', 'EXPIRED'].includes(res.reservationStatus)) return false;
       const extStart = new Date(`${res.startDate.split('T')[0]}T${res.startTime || '00:00'}`);
       const extEnd = new Date(`${res.endDate.split('T')[0]}T${res.endTime || '23:59'}`);
       return (newStart < extEnd && newEnd > extStart);

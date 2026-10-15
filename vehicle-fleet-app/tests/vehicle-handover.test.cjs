@@ -9,6 +9,7 @@ test('next booking can receive with explicit confirmation; old return stays open
  r=await run({reservationId:'next',type:'IN',mileage:150,confirmPreviousReturned:true});assert.equal(r.status,200);assert.equal(stored.checkInOutLog.length,2);assert.equal(stored.checkInOutLog[0].checkOutTime,null);assert.equal(stored.reservation[0].reservationStatus,'CHECKED_IN');assert.ok(stored.checkInOutLog[0].remark.includes('[HANDOVER]'));
  r=await run({reservationId:'next',type:'IN',mileage:150,confirmPreviousReturned:true});assert.equal(r.status,409);assert.equal(stored.checkInOutLog.length,2);
  r=await run({reservationId:'old',type:'OUT',mileage:140});assert.equal(r.status,400);
+ r=await run({reservationId:'old',type:'OUT',mileage:140,actualReturn:'not-a-date'});assert.equal(r.status,400);
  r=await run({reservationId:'old',type:'OUT',mileage:160,actualReturn:'2026-10-15T11:00'});assert.equal(r.status,400);
  r=await run({reservationId:'old',type:'OUT',mileage:140,actualReturn:'2026-10-15T13:00'});assert.equal(r.status,400);
  r=await run({reservationId:'old',type:'OUT',mileage:140,actualReturn:'2026-10-15T11:00'});assert.equal(r.status,200);assert.equal(stored.vehicle[0].vehicleStatus,'IN_USE');assert.equal(stored.vehicle[0].currentMileage,150);

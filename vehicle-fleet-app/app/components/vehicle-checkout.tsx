@@ -19,6 +19,8 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
   
   const [scannedVehicle, setScannedVehicle] = useState<any>(null);
   const [vehicleBookings, setVehicleBookings] = useState<any[]>([]);
+  const [canConfirmHandover, setCanConfirmHandover] = useState(false);
+  const [overdueReturnCount, setOverdueReturnCount] = useState(0);
   const [activeWalkInLog, setActiveWalkInLog] = useState<any>(null);
 
   const handleScanQR = async (codeToSearch: string) => {
@@ -42,6 +44,8 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
       if (!response.ok) throw new Error(data.error || 'ไม่พบรถยนต์');
       const targetVehicle = data.vehicle;
       const activeBookings = data.bookings;
+      setCanConfirmHandover(data.canConfirmHandover === true);
+      setOverdueReturnCount(data.overdueReturnCount || 0);
       setScannedVehicle(targetVehicle);
       setVehicleBookings(activeBookings);
       setActiveWalkInLog(data.activeWalkInLog);
@@ -56,7 +60,7 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
       }
 
     } catch (e) {
-      setScannedVehicle(null); setVehicleBookings([]); setActiveWalkInLog(null);
+      setCanConfirmHandover(false); setOverdueReturnCount(0); setScannedVehicle(null); setVehicleBookings([]); setActiveWalkInLog(null);
       showError('ดึงข้อมูลไม่สำเร็จ', e instanceof Error ? e.message : 'ไม่สามารถติดต่อฐานข้อมูลได้');
     } finally {
       setLoading(false);
@@ -80,6 +84,8 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
       title: `<span style="color: ${type === 'IN' ? '#059669' : '#e11d48'}; font-weight: 800; font-size: 1.5rem;">${type === 'IN' ? '🟢 รับรถ (Check-in)' : '🔴 คืนรถ (Check-out)'}</span>`,
       html: `
         <div class="text-left space-y-4 mt-4 font-sans" style="text-align: left;">
+          ${type === 'IN' && b && canConfirmHandover ? `<div style="padding:12px;background:#fff7ed;border:1px solid #fdba74;border-radius:12px;margin-bottom:14px;color:#9a3412"><p>มีรายการเก่าที่ยังไม่ได้บันทึกคืน ${overdueReturnCount} รายการ</p><label><input id="confirm-previous-returned" type="checkbox" /> ฉันยืนยันว่าได้รับรถคืนมาจริงแล้ว และรับรถต่อไปใช้งาน โดยเก็บรายการเก่าให้แอดมินตรวจสอบ</label></div>` : ''}
+          ${type === 'OUT' && b?.nextUsage ? `<div style="padding:12px;background:#fff7ed;border-radius:12px;margin-bottom:14px"><p>รายการเก่ารอบันทึกคืน มีคิวถัดไปรับรถแล้ว เลขไมล์คืนต้องไม่เกิน ${b.nextUsage.mileageOut} กม.</p><label>เวลาคืนรถจริง *</label><input id="actual-return" type="datetime-local" style="width:100%;padding:10px;color:#0f172a" /></div>` : ''}
           
           ${isWalkIn && type === 'IN' ? `
             <div style="margin-bottom: 12px; background: #fffbeb; padding: 12px; border-radius: 14px; border: 1px solid #fde68a;">
@@ -131,6 +137,10 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
         const r = document.getElementById('swal-remark') ? (document.getElementById('swal-remark') as HTMLTextAreaElement).value : '';
         const empInput = document.getElementById('swal-empid') ? (document.getElementById('swal-empid') as HTMLInputElement).value : null;
 
+        const confirmPreviousReturned = (document.getElementById('confirm-previous-returned') as HTMLInputElement | null)?.checked === true;
+        const actualReturn = (document.getElementById('actual-return') as HTMLInputElement | null)?.value;
+        if (type === 'IN' && b && canConfirmHandover && !confirmPreviousReturned) return Swal.showValidationMessage('กรุณายืนยันว่าได้รับรถคืนมาจริงแล้วก่อนรับรถต่อ');
+        if (type === 'OUT' && b?.nextUsage && !actualReturn) return Swal.showValidationMessage('กรุณาระบุเวลาคืนรถจริงของรายการเก่า');
         if (isWalkIn && type === 'IN' && !empInput) return Swal.showValidationMessage('⚠️ กรุณากรอกรหัสพนักงานผู้ขับขี่');
         if (!m) return Swal.showValidationMessage('⚠️ กรุณากรอกเลขไมล์ปัจจุบันก่อนครับ!');
         if (type === 'OUT' && parseInt(m, 10) < mileageOut) return Swal.showValidationMessage(`❌ ไมล์ขากลับ (${m}) น้อยกว่าขาไป (${mileageOut}) เป็นไปไม่ได้!`);
@@ -141,7 +151,7 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
           try { base64Photo = await preparePhoto(file); }
           catch (error) { return Swal.showValidationMessage(error instanceof Error ? error.message : 'ไม่สามารถอ่านรูปภาพได้'); }
         }
-        return { mileage: m, photoUrl: base64Photo, remark: r, employeeId: empInput };
+        return { confirmPreviousReturned, actualReturn, mileage: m, photoUrl: base64Photo, remark: r, employeeId: empInput };
       }
     });
 
@@ -159,7 +169,7 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
             type, 
             mileage: formValues.mileage, 
             photoUrl: formValues.photoUrl, 
-            remark: formValues.remark 
+            remark: formValues.remark, confirmPreviousReturned: formValues.confirmPreviousReturned, actualReturn: formValues.actualReturn 
           })
         });
 
@@ -236,8 +246,9 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
                     <div key={b.reservationId} className="p-5 rounded-2xl border-2 border-slate-100 bg-slate-50/50">
                       <div className="flex justify-between items-start mb-4">
                         <div><p className="font-bold text-slate-800 text-lg">{b.employee.fullName}</p><p className="text-sm text-slate-500 mt-1">📍 {b.destination}</p></div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${b.reservationStatus === 'BOOKED' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>{bookingStatuses[(b.displayStatus || b.reservationStatus) as keyof typeof bookingStatuses]?.label}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${b.reservationStatus === 'BOOKED' ? 'bg-indigo-100 text-indigo-700' : 'bg-amber-100 text-amber-700'}`}>{b.pendingReturn ? 'คิวเก่ารอบันทึกคืน (มีผู้รับรถต่อแล้ว)' : bookingStatuses[(b.displayStatus || b.reservationStatus) as keyof typeof bookingStatuses]?.label}</span>
                       </div>
+                      <p className="text-sm text-slate-600 mb-3">{b.startDate.slice(0, 10)} {b.startTime} – {b.endDate.slice(0, 10)} {b.endTime}</p>
                       <div className="pt-4 border-t border-slate-200 flex justify-end">
                         {b.reservationStatus === 'BOOKED' && !b.canRecordLate && (<button onClick={() => handleAction(b, 'IN')} className="w-full sm:w-auto bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-md">🔓 รับรถ (Check-in)</button>)}
                         {b.canRecordLate && (<button onClick={async () => { if (await lateUsageForm(b)) { await showSuccess('บันทึกการใช้งานแล้ว'); await handleScanQR('vehicle:' + b.vehicleId); } }} className="w-full sm:w-auto bg-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-md">บันทึกการใช้รถจริงของวันนี้</button>)}

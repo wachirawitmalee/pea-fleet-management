@@ -1,3 +1,4 @@
+import { canHandover, handoverNote } from './vehicle-handover';
 import { prisma } from './prisma';
 import { parseMileage } from './vehicle-mileage';
 import { canRecordLate, thaiDay } from './booking-status';
@@ -28,19 +29,23 @@ export async function recordLateUsage(body: Record<string, unknown>, now = new D
     prisma.checkInOutLog.findMany({ where: { vehicleId: booking.vehicleId } }),
     prisma.reservation.findMany({ where: { vehicleId: booking.vehicleId, reservationStatus: { in: ['BOOKED', 'CHECKED_IN'] } } }),
   ]);
-  if (!returned && (vehicle.vehicleStatus !== 'AVAILABLE' || logs.some(l => !l.checkOutTime))) return fail('รถกำลังถูกใช้งานหรืออยู่ระหว่างซ่อม กรุณาติดต่อแอดมิน', 409);
-  if (logs.some(l => start < (l.checkOutTime || now) && end > l.checkInTime)) return fail('เวลาที่ระบุทับกับประวัติการใช้งานอื่น กรุณาติดต่อแอดมิน', 409);
+  const pending = logs.filter(l => !l.checkOutTime && l.checkInTime < end);
+  const handover = pending.length > 0 && body.confirmPreviousReturned === true && canHandover(pending, otherBookings, start);
+  const ignored = new Set(handover ? pending.map(l => l.logId) : []);
+  if (!returned && (vehicle.vehicleStatus === 'MAINTENANCE' || ((vehicle.vehicleStatus !== 'AVAILABLE' || logs.some(l => !l.checkOutTime)) && !handover))) return fail('รถกำลังถูกใช้งานหรืออยู่ระหว่างซ่อม กรุณาติดต่อแอดมิน', 409);
+  if (logs.some(l => !ignored.has(l.logId) && start < (l.checkOutTime || now) && end > l.checkInTime)) return fail('เวลาที่ระบุทับกับประวัติการใช้งานอื่น กรุณาติดต่อแอดมิน', 409);
   const occupiedUntil = returned ? end : new Date(Math.max(now.getTime(), bookingTime(booking.endDate, booking.endTime).getTime()));
   if (otherBookings.some(b => b.reservationId !== booking.reservationId && start < bookingTime(b.endDate, b.endTime) && occupiedUntil > bookingTime(b.startDate, b.startTime))) return fail('ช่วงเวลานี้มีคิวอื่นจองอยู่ กรุณาติดต่อแอดมินเพื่อตรวจสอบ', 409);
   const photo = await storePhoto(body.photoUrl);
   const note = 'บันทึกการใช้รถย้อนหลังภายในวันเดียวกัน เวลาแจ้งระบบ: ' + now.toISOString() + '\nสถานะใบจองเดิม: ' + booking.reservationStatus + '\n' + String(body.remark || '');
   const [log] = await prisma.$transaction([
     prisma.checkInOutLog.create({ data: { reservationId: booking.reservationId, vehicleId: booking.vehicleId, employeeId: booking.employeeId,
-      checkInTime: start, checkOutTime: returned ? end : null, mileageOut, mileageIn, photoOutUrl: photo, remark: note } }),
+      checkInTime: start, checkOutTime: returned ? end : null, mileageOut, mileageIn, photoOutUrl: photo, remark: note + (handover ? '\n' + handoverNote(now, booking.employeeId) : '') } }),
+    ...pending.filter(l => ignored.has(l.logId)).map(l => prisma.checkInOutLog.update({ where: { logId: l.logId }, data: { remark: [l.remark, handoverNote(now, booking.employeeId)].filter(Boolean).join('\n') } })),
     prisma.reservation.update({ where: { reservationId: booking.reservationId }, data: { reservationStatus: returned ? 'COMPLETED' : 'CHECKED_IN' } }),
     prisma.vehicle.update({ where: { vehicleId: booking.vehicleId }, data: {
       currentMileage: Math.max(vehicle.currentMileage, mileageIn ?? mileageOut),
-      ...(!returned ? { vehicleStatus: 'IN_USE' } : {}),
+      ...(!returned ? { vehicleStatus: 'IN_USE' } : handover && vehicle.vehicleStatus !== 'MAINTENANCE' && !logs.some(l => !l.checkOutTime && !ignored.has(l.logId)) ? { vehicleStatus: 'AVAILABLE' } : {}),
     } }),
   ]);
   return Response.json(log);

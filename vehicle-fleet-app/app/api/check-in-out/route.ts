@@ -1,3 +1,4 @@
+import { canHandover, handoverNote } from '@/lib/vehicle-handover';
 import { recordLateUsage } from '@/lib/late-usage';
 import { bookingTime } from '@/lib/fleet-time';
 import { currentVehicles } from '@/lib/current-vehicles';
@@ -32,12 +33,16 @@ async function handlePOST(request: Request) {
       if (reservation && reservation.reservationStatus !== 'BOOKED') return NextResponse.json({ error: 'ใบจองนี้ไม่สามารถรับรถได้' }, { status: 409 });
       const employee = employeeId ? await prisma.employee.findUnique({ where: { employeeId } }) : null;
       if (!employee || employee.status !== 'ACTIVE') return NextResponse.json({ error: 'ไม่พบพนักงานที่พร้อมใช้งาน' }, { status: 400 });
-      const active = await prisma.checkInOutLog.findFirst({ where: { vehicleId, checkOutTime: null } });
-      if (vehicle.vehicleStatus !== 'AVAILABLE' || active) return NextResponse.json({ error: 'รถยนต์ไม่พร้อมใช้งานหรือยังไม่คืนรถ' }, { status: 409 });
+      const active = await prisma.checkInOutLog.findMany({ where: { vehicleId, checkOutTime: null } });
+      const bookings = active.length ? await prisma.reservation.findMany({ where: { vehicleId } }) : [];
+      const now = new Date();
+      const handover = !!reservation && active.length > 0 && canHandover(active, bookings, now) && body.confirmPreviousReturned === true;
+      if (vehicle.vehicleStatus === 'MAINTENANCE' || (active.length > 0 && !handover) || (vehicle.vehicleStatus !== 'AVAILABLE' && !handover)) return NextResponse.json({ error: 'รถยังมีรายการรับรถค้าง หากได้รับรถคืนมาจริง ให้ยืนยันการรับรถต่อจากรายการที่เลยกำหนดแล้ว' }, { status: 409 });
       if (mileage < vehicle.currentMileage) return NextResponse.json({ error: 'เลขไมล์น้อยกว่าค่าปัจจุบันของรถ' }, { status: 400 });
       const photo = await storePhoto(body.photoUrl);
       const [log] = await prisma.$transaction([
-        prisma.checkInOutLog.create({ data: { reservationId: reservationId || null, vehicleId, employeeId, mileageOut: mileage, photoOutUrl: photo, checkInTime: new Date() } }),
+        prisma.checkInOutLog.create({ data: { reservationId: reservationId || null, vehicleId, employeeId, mileageOut: mileage, photoOutUrl: photo, checkInTime: now, remark: handover ? handoverNote(now, employeeId) + '\nรายการเดิม: ' + active.map(l => l.logId).join(', ') : null } }),
+        ...active.map(l => prisma.checkInOutLog.update({ where: { logId: l.logId }, data: { remark: [l.remark, handoverNote(now, employeeId)].filter(Boolean).join('\n') } })),
         prisma.vehicle.update({ where: { vehicleId }, data: { vehicleStatus: 'IN_USE', currentMileage: mileage } }),
         ...(reservationId ? [prisma.reservation.update({ where: { reservationId }, data: { reservationStatus: 'CHECKED_IN' } })] : []),
       ]);
@@ -46,11 +51,15 @@ async function handlePOST(request: Request) {
     if (reservation && reservation.reservationStatus !== 'CHECKED_IN') return NextResponse.json({ error: 'ใบจองนี้ยังไม่ได้รับรถหรือคืนรถแล้ว' }, { status: 409 });
     const active = await prisma.checkInOutLog.findFirst({ where: { vehicleId, reservationId: reservationId || null, checkOutTime: null }, orderBy: { checkInTime: 'desc' } });
     if (!active) return NextResponse.json({ error: 'ไม่พบประวัติรถที่รอคืน' }, { status: 404 });
-    if (mileage < active.mileageOut || mileage < vehicle.currentMileage) return NextResponse.json({ error: 'เลขไมล์คืนรถต้องไม่น้อยกว่าเลขไมล์ขาไปและเลขไมล์ปัจจุบัน' }, { status: 400 });
+    const allLogs = await prisma.checkInOutLog.findMany({ where: { vehicleId }, orderBy: { checkInTime: 'asc' } });
+    const successor = allLogs.find(l => l.checkInTime > active.checkInTime);
+    const actualReturn = successor ? (typeof body.actualReturn === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(body.actualReturn) ? new Date(body.actualReturn + ':00+07:00') : new Date(NaN)) : new Date();
+    if (successor && (!body.actualReturn || !Number.isFinite(actualReturn.getTime()) || actualReturn < active.checkInTime || actualReturn > successor.checkInTime || actualReturn > new Date())) return NextResponse.json({ error: 'กรุณาระบุเวลาคืนจริงของรายการเก่า ซึ่งต้องไม่เกินเวลารับรถของคิวถัดไป' }, { status: 400 });
+    if (mileage < active.mileageOut || (successor ? mileage > successor.mileageOut : mileage < vehicle.currentMileage)) return NextResponse.json({ error: successor ? 'เลขไมล์คืนของรายการเก่าต้องอยู่ระหว่างเลขไมล์ออกเดิมกับเลขไมล์รับรถของคิวถัดไป' : 'เลขไมล์คืนรถต้องไม่น้อยกว่าเลขไมล์ขาไปและเลขไมล์ปัจจุบัน' }, { status: 400 });
     const photo = await storePhoto(body.photoUrl);
     const [log] = await prisma.$transaction([
-      prisma.checkInOutLog.update({ where: { logId: active.logId }, data: { mileageIn: mileage, photoInUrl: photo, checkOutTime: new Date(), remark: [active.remark, remark].filter(Boolean).join("\n") || null } }),
-      prisma.vehicle.update({ where: { vehicleId }, data: { currentMileage: mileage, vehicleStatus: 'AVAILABLE' } }),
+      prisma.checkInOutLog.update({ where: { logId: active.logId }, data: { mileageIn: mileage, photoInUrl: photo, checkOutTime: actualReturn, remark: [active.remark, remark].filter(Boolean).join("\n") || null } }),
+      prisma.vehicle.update({ where: { vehicleId }, data: { currentMileage: Math.max(vehicle.currentMileage, mileage), vehicleStatus: vehicle.vehicleStatus === 'MAINTENANCE' ? 'MAINTENANCE' : allLogs.some(l => l.logId !== active.logId && !l.checkOutTime && l.checkInTime > active.checkInTime) ? 'IN_USE' : 'AVAILABLE' } }),
       ...(reservationId ? [prisma.reservation.update({ where: { reservationId }, data: { reservationStatus: 'COMPLETED' } })] : []),
     ]);
     return NextResponse.json(log);

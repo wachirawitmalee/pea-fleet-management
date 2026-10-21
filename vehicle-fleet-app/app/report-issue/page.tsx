@@ -85,7 +85,7 @@ export default function ReportIssuePage() {
     setIsSubmitting(true);
     
     // 🌟 4. เรียก Loading Spinner ทันทีที่กดปุ่มแจ้งซ่อม
-    showLoading('กำลังส่งข้อมูล...', 'ระบบกำลังบันทึกใบแจ้งซ่อมและล็อกสถานะรถ');
+    showLoading('กำลังส่งข้อมูล...', 'ระบบกำลังสร้างใบแจ้งซ่อมรายการใหม่');
 
     try {
       const res = await fetch('/api/maintenance', {
@@ -109,7 +109,7 @@ export default function ReportIssuePage() {
             <div class="mt-4 font-sans text-center">
               <p class="text-sm font-bold text-slate-500">เลขที่ใบแจ้งซ่อมของคุณคือ</p>
               <div class="text-4xl font-extrabold text-red-600 my-3 tracking-wider bg-red-50 py-3 rounded-2xl border border-red-100">${newTicket.ticketNumber}</div>
-              <p class="text-sm font-medium text-slate-500 mb-6">รถคันนี้ถูกล็อกสถานะเพื่อเตรียมเข้าอู่เรียบร้อยแล้ว</p>
+              <p class="text-sm font-medium text-slate-500 mb-6">บันทึกใบแจ้งซ่อมใหม่แล้ว สามารถแจ้งปัญหาเพิ่มเติมของรถคันเดิมได้</p>
               
               <a href="/admin/maintenance/print/${newTicket.ticketId}" target="_blank" class="inline-flex items-center justify-center gap-2 w-full bg-amber-100 text-amber-700 border-2 border-amber-300 px-6 py-4 rounded-xl font-bold hover:bg-amber-200 transition-colors text-lg shadow-sm">
                 🖨️ พิมพ์ใบแจ้งซ่อม (PDF)
@@ -193,6 +193,7 @@ export default function ReportIssuePage() {
 
             <div className="bg-slate-50 p-6 rounded-2xl border border-slate-300 shadow-sm">
               <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="text-xl">🚙</span> รถยนต์ที่พบปัญหา <span className="text-red-500 text-sm">*</span></h3>
+              <p className="mb-4 text-sm font-bold text-slate-700">แจ้งซ่อมได้ทุกสถานะ และแจ้งเพิ่มได้แม้มีใบเดิมรอตรวจสอบหรือกำลังซ่อม แต่ละรายการจะได้รับเลขใบแจ้งซ่อมแยกกัน</p>
    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {vehicles.map((v) => {
                   const isMaintenance = v.vehicleStatus === 'MAINTENANCE';
@@ -223,7 +224,7 @@ export default function ReportIssuePage() {
                       
                       <div className="ml-auto flex-shrink-0">
                         {isMaintenance ? (
-                          <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200 whitespace-nowrap">🛠️ ส่งซ่อมอยู่</span>
+                          <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200 whitespace-nowrap">🛠️ มีรายการซ่อม — แจ้งเพิ่มได้</span>
                         ) : (
                           <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 whitespace-nowrap">เลือกรถคันนี้</span>
                         )}

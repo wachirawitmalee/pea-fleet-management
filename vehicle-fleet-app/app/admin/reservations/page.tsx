@@ -12,6 +12,30 @@ export default function AdminReservationsPage() {
   const [searchQuery, setSearchQuery] = useState(''); // 🌟 เพิ่ม State การค้นหา
   const [isLoading, setIsLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [actualReturn, setActualReturn] = useState('');
+  const [returnMileage, setReturnMileage] = useState('');
+  const [returnNote, setReturnNote] = useState('');
+  const [returnError, setReturnError] = useState('');
+  const [savingReturn, setSavingReturn] = useState(false);
+
+  const closePendingReturn = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSavingReturn(true);
+    setReturnError('');
+    try {
+      const log = selectedLog.logs || selectedLog.checkInOutLog;
+      const response = await fetch('/api/check-in-out', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'ADMIN_RETURN', logId: log.logId, actualReturn, mileage: returnMileage, remark: returnNote }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'บันทึกไม่สำเร็จ');
+      setSelectedLog(null);
+      await fetchData();
+    } catch (error) {
+      setReturnError(error instanceof Error ? error.message : 'บันทึกไม่สำเร็จ');
+    } finally { setSavingReturn(false); }
+  };
 
   useEffect(() => {
     fetchData();
@@ -37,6 +61,7 @@ export default function AdminReservationsPage() {
 
   const openPhotoModal = (resv: any) => {
     setSelectedLog(resv);
+    setActualReturn(''); setReturnMileage(''); setReturnNote(''); setReturnError('');
   };
 
   // 🌟 ฟังก์ชันกรองการจองตามคำค้นหา
@@ -108,7 +133,7 @@ export default function AdminReservationsPage() {
                         <td className="p-4 text-center">
                           {r.logs || r.checkInOutLog ? (
                             <button onClick={() => openPhotoModal(r)} className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md hover:bg-slate-900 transition-all flex items-center gap-2 mx-auto">
-                              📸 ดูบันทึกและรูปถ่าย
+                              📸 ดูบันทึก / บันทึกคืนรถ
                             </button>
                           ) : (
                             <span className="text-xs font-bold text-slate-400">ยังไม่มีการรับรถ</span>
@@ -144,6 +169,24 @@ export default function AdminReservationsPage() {
                   <p className="mt-2 text-amber-600 font-extrabold">⏳ กำลังใช้งานอยู่ (ยังไม่คืนรถ)</p>
                 )}
               </div>
+
+              {!(selectedLog.logs || selectedLog.checkInOutLog)?.checkOutTime && (
+                <form onSubmit={closePendingReturn} className="mb-6 p-5 rounded-2xl border border-amber-300 bg-amber-50 space-y-3">
+                  <h4 className="font-extrabold text-slate-900">แอดมินบันทึกคืนรถจริง / ปิดรายการค้าง</h4>
+                  <p className="text-sm text-slate-700">กรอกเวลาคืนจริงตามเวลาไทยและเลขไมล์คืน หากมีคิวถัดไป ข้อมูลต้องไม่เกินเวลารับรถและเลขไมล์รับรถของคิวนั้น ระบบจะคงสถานะและเลขไมล์ปัจจุบันของคิวใหม่ไว้</p>
+                  <label className="block font-bold text-slate-900">เวลาคืนรถจริง
+                    <input required type="datetime-local" value={actualReturn} onChange={e => setActualReturn(e.target.value)} className="block w-full border rounded-lg p-3 bg-white" />
+                  </label>
+                  <label className="block font-bold text-slate-900">เลขไมล์คืนจริง (กม.)
+                    <input required type="number" min={(selectedLog.logs || selectedLog.checkInOutLog).mileageOut} step="1" value={returnMileage} onChange={e => setReturnMileage(e.target.value)} className="block w-full border rounded-lg p-3 bg-white" />
+                  </label>
+                  <label className="block font-bold text-slate-900">หมายเหตุการบันทึกย้อนหลัง
+                    <textarea value={returnNote} onChange={e => setReturnNote(e.target.value)} className="block w-full border rounded-lg p-3 bg-white" />
+                  </label>
+                  {returnError && <p role="alert" className="font-bold text-red-700">{returnError}</p>}
+                  <button disabled={savingReturn} className="px-5 py-3 rounded-xl bg-emerald-700 text-white font-bold disabled:opacity-50">{savingReturn ? 'กำลังบันทึก...' : 'บันทึกคืนจริงและปิดรายการนี้'}</button>
+                </form>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="border-2 border-blue-200 bg-blue-50/30 rounded-2xl p-5">

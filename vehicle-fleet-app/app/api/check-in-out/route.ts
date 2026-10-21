@@ -18,12 +18,18 @@ async function handlePOST(request: Request) {
   try {
     const body = await request.json();
     if (body.type === 'LATE') return recordLateUsage(body);
-    const { reservationId, type, remark } = body;
+    const adminReturn = body.type === 'ADMIN_RETURN';
+    const targetLog = adminReturn && typeof body.logId === 'string' ? await prisma.checkInOutLog.findUnique({ where: { logId: body.logId } }) : null;
+    if (adminReturn && !targetLog) return NextResponse.json({ error: 'ไม่พบรายการรับรถ' }, { status: 404 });
+    if (adminReturn && targetLog?.checkOutTime) return NextResponse.json({ error: 'รายการนี้คืนรถแล้ว กรุณาโหลดข้อมูลใหม่' }, { status: 409 });
+    const reservationId = adminReturn ? targetLog?.reservationId : body.reservationId;
+    const type = adminReturn ? 'OUT' : body.type;
+    const remark = adminReturn ? `[ADMIN_RETURN] ${new Date().toISOString()} แอดมินบันทึกคืนรถจริงย้อนหลัง${body.remark ? '\n' + String(body.remark) : ''}` : body.remark;
     const mileage = parseMileage(body.mileage);
     if (!['IN', 'OUT'].includes(type) || mileage === null) return NextResponse.json({ error: 'กรุณาระบุประเภทและเลขไมล์ให้ถูกต้อง' }, { status: 400 });
     const reservation = reservationId ? await prisma.reservation.findUnique({ where: { reservationId } }) : null;
     if (reservationId && !reservation) return NextResponse.json({ error: 'ไม่พบใบจอง' }, { status: 404 });
-    const vehicleId = reservation?.vehicleId || body.vehicleId;
+    const vehicleId = targetLog?.vehicleId || reservation?.vehicleId || body.vehicleId;
     const employeeId = reservation?.employeeId || body.employeeId;
     if (!vehicleId) return NextResponse.json({ error: 'กรุณาระบุรถยนต์' }, { status: 400 });
     const [vehicle] = await currentVehicles(vehicleId);
@@ -49,17 +55,18 @@ async function handlePOST(request: Request) {
       return NextResponse.json(log);
     }
     if (reservation && reservation.reservationStatus !== 'CHECKED_IN') return NextResponse.json({ error: 'ใบจองนี้ยังไม่ได้รับรถหรือคืนรถแล้ว' }, { status: 409 });
-    const active = await prisma.checkInOutLog.findFirst({ where: { vehicleId, reservationId: reservationId || null, checkOutTime: null }, orderBy: { checkInTime: 'desc' } });
+    const active = targetLog || await prisma.checkInOutLog.findFirst({ where: { vehicleId, reservationId: reservationId || null, checkOutTime: null }, orderBy: { checkInTime: 'desc' } });
     if (!active) return NextResponse.json({ error: 'ไม่พบประวัติรถที่รอคืน' }, { status: 404 });
     const allLogs = await prisma.checkInOutLog.findMany({ where: { vehicleId }, orderBy: { checkInTime: 'asc' } });
     const successor = allLogs.find(l => l.checkInTime > active.checkInTime);
-    const actualReturn = successor ? (typeof body.actualReturn === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(body.actualReturn) ? new Date(body.actualReturn + ':00+07:00') : new Date(NaN)) : new Date();
-    if (successor && (!body.actualReturn || !Number.isFinite(actualReturn.getTime()) || actualReturn < active.checkInTime || actualReturn > successor.checkInTime || actualReturn > new Date())) return NextResponse.json({ error: 'กรุณาระบุเวลาคืนจริงของรายการเก่า ซึ่งต้องไม่เกินเวลารับรถของคิวถัดไป' }, { status: 400 });
-    if (mileage < active.mileageOut || (successor ? mileage > successor.mileageOut : mileage < vehicle.currentMileage)) return NextResponse.json({ error: successor ? 'เลขไมล์คืนของรายการเก่าต้องอยู่ระหว่างเลขไมล์ออกเดิมกับเลขไมล์รับรถของคิวถัดไป' : 'เลขไมล์คืนรถต้องไม่น้อยกว่าเลขไมล์ขาไปและเลขไมล์ปัจจุบัน' }, { status: 400 });
-    const photo = await storePhoto(body.photoUrl);
+    const needsTime = adminReturn || !!successor;
+    const actualReturn = needsTime ? (typeof body.actualReturn === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(body.actualReturn) ? new Date(body.actualReturn + ':00+07:00') : new Date(NaN)) : new Date();
+    if (needsTime && (!Number.isFinite(actualReturn.getTime()) || new Date(actualReturn.getTime() + 7 * 3600000).toISOString().slice(0, 16) !== body.actualReturn || actualReturn < active.checkInTime || (successor && actualReturn > successor.checkInTime) || actualReturn > new Date())) return NextResponse.json({ error: 'เวลาคืนจริงต้องไม่ก่อนรับรถ ไม่อยู่ในอนาคต และไม่เกินเวลารับรถของคิวถัดไป' }, { status: 400 });
+    if (mileage < active.mileageOut || (successor ? mileage > successor.mileageOut : (!adminReturn && mileage < vehicle.currentMileage))) return NextResponse.json({ error: successor ? 'เลขไมล์คืนของรายการเก่าต้องอยู่ระหว่างเลขไมล์ออกเดิมกับเลขไมล์รับรถของคิวถัดไป' : 'เลขไมล์คืนรถต้องไม่น้อยกว่าเลขไมล์ขาไปและเลขไมล์ปัจจุบัน' }, { status: 400 });
+    const photo = adminReturn ? active.photoInUrl : await storePhoto(body.photoUrl);
     const [log] = await prisma.$transaction([
       prisma.checkInOutLog.update({ where: { logId: active.logId }, data: { mileageIn: mileage, photoInUrl: photo, checkOutTime: actualReturn, remark: [active.remark, remark].filter(Boolean).join("\n") || null } }),
-      prisma.vehicle.update({ where: { vehicleId }, data: { currentMileage: Math.max(vehicle.currentMileage, mileage), vehicleStatus: vehicle.vehicleStatus === 'MAINTENANCE' ? 'MAINTENANCE' : allLogs.some(l => l.logId !== active.logId && !l.checkOutTime && l.checkInTime > active.checkInTime) ? 'IN_USE' : 'AVAILABLE' } }),
+      ...((adminReturn && successor) ? [] : [prisma.vehicle.update({ where: { vehicleId }, data: { currentMileage: Math.max(vehicle.currentMileage, mileage), vehicleStatus: vehicle.vehicleStatus === 'MAINTENANCE' ? 'MAINTENANCE' : allLogs.some(l => l.logId !== active.logId && !l.checkOutTime && l.checkInTime > active.checkInTime) ? 'IN_USE' : 'AVAILABLE' } })]),
       ...(reservationId ? [prisma.reservation.update({ where: { reservationId }, data: { reservationStatus: 'COMPLETED' } })] : []),
     ]);
     return NextResponse.json(log);

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { vehicleLookup } from '@/lib/vehicle-qr';
 import { lateUsageForm } from '@/lib/late-usage-form';
+import { cancelBooking } from '@/lib/cancel-booking';
 import { bookingStatuses } from '@/lib/booking-status';
 import { preparePhoto } from '@/lib/prepare-photo';
 import Swal from 'sweetalert2';
@@ -250,6 +251,7 @@ export default function VehicleCheckout({ initialVehicleId }: { initialVehicleId
                       </div>
                       <p className="text-sm text-slate-600 mb-3">{b.startDate.slice(0, 10)} {b.startTime} – {b.endDate.slice(0, 10)} {b.endTime}</p>
                       <div className="pt-4 border-t border-slate-200 flex justify-end">
+                        {b.reservationStatus === 'BOOKED' && !b.checkInOutLog && (<button onClick={async () => { if (await cancelBooking(b.reservationId)) await handleScanQR('vehicle:' + scannedVehicle.vehicleId); }} className="w-full sm:w-auto border border-red-300 text-red-700 px-6 py-3 rounded-xl font-bold">ยกเลิกการจอง</button>)}
                         {b.reservationStatus === 'BOOKED' && !b.canRecordLate && (<button onClick={() => handleAction(b, 'IN')} className="w-full sm:w-auto bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-md">🔓 รับรถ (Check-in)</button>)}
                         {b.canRecordLate && (<button onClick={async () => { if (await lateUsageForm(b)) { await showSuccess('บันทึกการใช้งานแล้ว'); await handleScanQR('vehicle:' + b.vehicleId); } }} className="w-full sm:w-auto bg-amber-600 text-white px-6 py-3 rounded-xl font-bold shadow-md">บันทึกการใช้รถจริงของวันนี้</button>)}
                         {b.reservationStatus === 'CHECKED_IN' && (<button onClick={() => handleAction(b, 'OUT')} className="w-full sm:w-auto bg-rose-500 text-white px-6 py-3 rounded-xl font-bold shadow-md">🔒 คืนรถ (Check-out)</button>)}

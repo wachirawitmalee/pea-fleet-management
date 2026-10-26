@@ -46,3 +46,24 @@ test('admin closes an old return without changing a newer trip; repeated repairs
   assert.equal(stored.maintenanceTicket.length,3);assert.equal(new Set(stored.maintenanceTicket.map(t=>t.ticketNumber)).size,3);
  }finally{global.fetch=originalFetch}
 });
+
+test('cancellation checks booker ID on the server, preserves logs and vehicle, and frees the booking slot',async()=>{
+ const {PUT,DELETE,POST:book}=require('../app/api/reservations/route.ts');let stored=fixture(),version=1;const originalFetch=global.fetch;
+ global.fetch=async(_,o)=>{const p=JSON.parse(o.body);if(p.action==='read')return Response.json({ok:true,data:{version:String(version),tables:stored}});assert.equal(p.version,String(version));stored={...stored,...p.tables};version++;return Response.json({ok:true,data:{}})};
+ const run=b=>PUT(new Request('http://localhost',{method:'PUT',body:JSON.stringify(b)}));
+ try{
+  const vehicleBefore=JSON.stringify(stored.vehicle),logsBefore=JSON.stringify(stored.checkInOutLog);
+  assert.equal((await run({reservationId:'next',reservationStatus:'CANCELLED'})).status,400);
+  assert.equal((await run({reservationId:'next',reservationStatus:'CANCELLED',employeeId:'wrong'})).status,403);
+  assert.equal(stored.reservation[1].reservationStatus,'BOOKED');
+  assert.equal((await run({reservationId:'old',reservationStatus:'CANCELLED',employeeId:'001'})).status,409);
+  assert.equal((await run({reservationId:'next',reservationStatus:'COMPLETED',employeeId:'001'})).status,400);
+  assert.equal((await run({reservationId:'missing',reservationStatus:'CANCELLED',employeeId:'001'})).status,404);
+  assert.equal((await DELETE()).status,405);
+  assert.equal((await run({reservationId:'next',reservationStatus:'CANCELLED',employeeId:' 001 '})).status,200);
+  assert.equal(stored.reservation.length,2);assert.equal(stored.reservation[1].reservationStatus,'CANCELLED');assert.equal(JSON.stringify(stored.vehicle),vehicleBefore);assert.equal(JSON.stringify(stored.checkInOutLog),logsBefore);
+  assert.equal((await run({reservationId:'next',reservationStatus:'CANCELLED',employeeId:'001'})).status,409);
+  const r=await book(new Request('http://localhost',{method:'POST',body:JSON.stringify({employeeId:'001',vehicleId:'v',startDate:'2026-10-15',startTime:'12:00',endDate:'2026-10-15',endTime:'13:00',destination:'Work',purpose:'Work'})}));assert.equal(r.status,201);
+  stored=fixture();stored.reservation[0].reservationStatus='BOOKED';assert.equal((await run({reservationId:'old',reservationStatus:'CANCELLED',employeeId:'001'})).status,409);
+ }finally{global.fetch=originalFetch}
+});

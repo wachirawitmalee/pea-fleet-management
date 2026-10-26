@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { cancelBooking } from '@/lib/cancel-booking';
 import { bookingStatuses } from '@/lib/booking-status';
 
 // 🌟 1. Import Helper Function มาใช้งาน (ใช้แค่ showError สำหรับดักจับปัญหาการดึงข้อมูล)
@@ -131,6 +132,9 @@ export default function AdminReservationsPage() {
                           </span>
                         </td>
                         <td className="p-4 text-center">
+                          {r.reservationStatus === 'BOOKED' && !r.logs && !r.checkInOutLog && (
+                            <button onClick={async () => { if (await cancelBooking(r.reservationId)) await fetchData(); }} className="mb-2 px-4 py-2 border border-red-300 text-red-700 rounded-xl font-bold text-xs">ยกเลิกการจอง</button>
+                          )}
                           {r.logs || r.checkInOutLog ? (
                             <button onClick={() => openPhotoModal(r)} className="px-4 py-2 bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md hover:bg-slate-900 transition-all flex items-center gap-2 mx-auto">
                               📸 ดูบันทึก / บันทึกคืนรถ

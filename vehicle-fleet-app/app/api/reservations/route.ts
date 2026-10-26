@@ -71,9 +71,15 @@ async function handlePOST(request: Request) {
 async function handlePUT(request: Request) {
   try {
     const body = await request.json();
-    const { reservationId, reservationStatus } = body;
+    const { reservationId, employeeId, reservationStatus } = body;
+    if (reservationStatus !== 'CANCELLED' || typeof employeeId !== 'string' || !employeeId.trim() || typeof reservationId !== 'string') return NextResponse.json({ error: 'กรุณากรอกรหัสพนักงานผู้จองเพื่อยืนยันการยกเลิก' }, { status: 400 });
+    const reservation = await prisma.reservation.findUnique({ where: { reservationId } });
+    if (!reservation) return NextResponse.json({ error: 'ไม่พบรายการจอง' }, { status: 404 });
+    if (employeeId.trim() !== reservation.employeeId) return NextResponse.json({ error: 'รหัสพนักงานไม่ตรงกับผู้จอง ไม่สามารถยกเลิกได้' }, { status: 403 });
+    const log = await prisma.checkInOutLog.findFirst({ where: { reservationId } });
+    if (reservation.reservationStatus !== 'BOOKED' || log) return NextResponse.json({ error: 'ยกเลิกได้เฉพาะรายการที่ยังไม่ได้รับรถและยังไม่สิ้นสุด' }, { status: 409 });
     const updatedReservation = await prisma.reservation.update({
-      where: { reservationId }, data: { reservationStatus }
+      where: { reservationId }, data: { reservationStatus: 'CANCELLED' }
     });
     return NextResponse.json({ success: true, data: updatedReservation });
   } catch (error) {
@@ -81,27 +87,11 @@ async function handlePUT(request: Request) {
   }
 }
 
-async function handleDELETE(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const reservationId = searchParams.get('id');
-
-    // 🌟 เพิ่มเงื่อนไขเช็ค null ตรงนี้ TypeScript จะเข้าใจทันที
-    if (!reservationId) {
-      return NextResponse.json({ error: 'ไม่พบรหัสการจอง' }, { status: 400 });
-    }
-
-    // ตอนนี้ TypeScript รู้แล้วว่า reservationId ต้องเป็น string แน่นอน
-    await prisma.checkInOutLog.deleteMany({ where: { reservationId } });
-    await prisma.reservation.delete({ where: { reservationId } });
-    
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: 'ไม่สามารถลบรายการจองนี้ได้' }, { status: 500 });
-  }
-}
 export const POST = withStorage(handlePOST);
 
 export const PUT = withStorage(handlePUT);
 
-export const DELETE = withStorage(handleDELETE);
+// Preserve booking and usage history instead of deleting records.
+export async function DELETE() {
+  return NextResponse.json({ error: 'กรุณายกเลิกพร้อมยืนยันรหัสพนักงาน ห้ามลบประวัติ' }, { status: 405 });
+}

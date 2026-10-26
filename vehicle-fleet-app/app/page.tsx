@@ -123,6 +123,7 @@ export default function Home() {
           </div>
           <div className="text-sm font-bold text-purple-700 bg-purple-100 px-4 py-2 rounded-full border border-purple-200 shadow-sm">
             สถานที่ปฏิบัติงาน: สาขาระโนด
+            <Link href="/guide" className="block sm:inline sm:ml-3 text-xs underline underline-offset-2">📖 คู่มือการใช้งาน</Link>
           </div>
         </div>
       </nav>

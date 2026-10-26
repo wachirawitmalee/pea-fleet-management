@@ -1,4 +1,5 @@
 "use client";
+import { cancelBooking } from '@/lib/cancel-booking';
 import { bookingStatuses, calendarStatus } from '@/lib/booking-status';
 
 
@@ -14,6 +15,7 @@ import Swal from 'sweetalert2';
 import { showError } from '@/lib/alert';
 
 export default function ScheduleCalendarPage() {
+  const [bookings, setBookings] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -25,10 +27,11 @@ export default function ScheduleCalendarPage() {
 
   const fetchReservations = async () => {
     try {
-      const res = await fetch('/api/reservations');
+      const res = await fetch('/api/reservations', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         
+        setBookings(data);
         const calendarEvents = data.map((res: any) => {
           const startDateTime = `${res.startDate.split('T')[0]}T${res.startTime}:00`;
           const endDateTime = `${res.endDate.split('T')[0]}T${res.endTime}:00`;
@@ -43,6 +46,7 @@ export default function ScheduleCalendarPage() {
             borderColor: status.background,
             textColor: status.color,
             extendedProps: {
+              canCancel: res.reservationStatus === 'BOOKED' && !res.checkInOutLog,
               statusLabel: status.label,
               purpose: res.purpose,
               destination: res.destination
@@ -62,12 +66,12 @@ export default function ScheduleCalendarPage() {
     }
   };
 
-  const handleEventClick = (clickInfo: any) => {
+  const handleEventClick = async (clickInfo: any) => {
     const event = clickInfo.event;
     const escape = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
     
     // 🌟 3. ตรงนี้ยังคงใช้ Swal.fire แบบเดิม เพราะมีการจัด Layout HTML ที่สวยงามเฉพาะเจาะจงอยู่แล้วครับ
-    Swal.fire({
+    const result = await Swal.fire({
       title: '<span style="color: #4c1d95; font-weight: 800; font-size: 1.4rem;">🚙 รายละเอียดการใช้รถ</span>',
       html: `
         <div style="background: #f8fafc; border-radius: 20px; padding: 24px; text-align: left; border: 1px solid #e2e8f0; box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.02);">
@@ -101,6 +105,9 @@ export default function ScheduleCalendarPage() {
           </div>
         </div>
       `,
+      showDenyButton: event.extendedProps.canCancel,
+      denyButtonText: 'ยกเลิกการจอง',
+      denyButtonColor: '#dc2626',
       confirmButtonText: 'ปิดหน้าต่าง',
       confirmButtonColor: '#9333ea',
       width: '32em',
@@ -109,6 +116,7 @@ export default function ScheduleCalendarPage() {
         confirmButton: 'rounded-xl px-8 py-3 font-bold text-md'
       }
     });
+    if (result.isDenied && await cancelBooking(event.id)) await fetchReservations();
   };
 
   return (
@@ -173,6 +181,16 @@ export default function ScheduleCalendarPage() {
             </div>
           )}
         </div>
+        <section className="mt-6 bg-white rounded-2xl border border-slate-200 p-5 overflow-x-auto">
+          <h2 className="font-bold text-xl text-slate-900 mb-2">คิวจองที่ยังไม่ได้รับรถ</h2>
+          <p className="text-sm text-slate-600 mb-4">กดรายการในปฏิทินเพื่อดูรายละเอียด หรือยกเลิกจากตารางนี้ โดยยืนยันรหัสพนักงานผู้จองอีกครั้ง</p>
+          <table className="w-full text-left text-sm text-slate-900"><thead><tr className="border-b"><th className="p-3">ผู้จอง</th><th className="p-3">ทะเบียนรถ</th><th className="p-3">ช่วงเวลาจอง</th><th className="p-3">จัดการ</th></tr></thead>
+            <tbody>{bookings.filter(b => b.reservationStatus === 'BOOKED' && !b.checkInOutLog).sort((a,b) => (a.startDate+a.startTime).localeCompare(b.startDate+b.startTime)).map(b => (
+              <tr key={b.reservationId} className="border-b"><td className="p-3">{b.employee.fullName}</td><td className="p-3">{b.vehicle.plateNumber}</td><td className="p-3">{new Date(b.startDate).toLocaleDateString('th-TH')} {b.startTime} – {new Date(b.endDate).toLocaleDateString('th-TH')} {b.endTime}</td><td className="p-3"><button onClick={async () => { if (await cancelBooking(b.reservationId)) await fetchReservations(); }} className="whitespace-nowrap border border-red-300 text-red-700 rounded-xl px-4 py-2 font-bold">ยกเลิกการจอง</button></td></tr>
+            ))}</tbody>
+          </table>
+          {!bookings.some(b => b.reservationStatus === 'BOOKED' && !b.checkInOutLog) && <p className="p-4 text-slate-600">ไม่มีคิวที่สามารถยกเลิกได้</p>}
+        </section>
       </main>
 
       {/* บังคับสีตัวหนังสือในปฏิทินให้เข้มทั้งหมด ชนกับ Dark Mode */}

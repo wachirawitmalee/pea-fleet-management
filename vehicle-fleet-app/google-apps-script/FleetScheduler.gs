@@ -70,6 +70,17 @@ function fleetTick() {
     if (properties.getProperty('FLEET_ENABLED') !== 'true') return;
     const now = new Date(), id = properties.getProperty('SPREADSHEET_ID');
     const tables = read_(id).tables, bookings = tables.reservation;
+    // Baseline existing cancellations once, then queue only newly cancelled bookings.
+    // Queue persistence happens before updating the registry so rejected deliveries remain retryable.
+    const cancelledIds = bookings.filter(b => b.reservationStatus === 'CANCELLED').map(b => b.reservationId);
+    const previousCancelled = properties.getProperty('FLEET_SEEN_CANCELLATIONS');
+    const seenCancelled = new Set(JSON.parse(previousCancelled || '[]'));
+    if (previousCancelled !== null && previousCancelled !== undefined) {
+      bookings.filter(b => b.reservationStatus === 'CANCELLED' && !seenCancelled.has(b.reservationId)).forEach(b =>
+        fleetQueue_(properties, 'manual-cancel:' + b.reservationId, 'ยกเลิกการจองรถ', fleetBookingDetails_(b, tables), 'https://pea-fleet-management.vercel.app/schedule'));
+    }
+    if (JSON.stringify(cancelledIds).length > 8500) throw new Error('Cancellation registry is full; archive old reservations');
+    properties.setProperty('FLEET_SEEN_CANCELLATIONS', JSON.stringify(cancelledIds));
     const expired = fleetExpired_(bookings, tables.checkInOutLog, now);
     if (expired.length) {
       const ids = new Set(expired.map(b => b.reservationId));

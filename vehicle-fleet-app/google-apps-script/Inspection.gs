@@ -13,6 +13,18 @@ function inspection_(input, properties) {
     let sheet = book.getSheetByName(name);
     const rows = sheet && sheet.getLastRow() > 1
       ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues() : [];
+    if (action === 'inspection-ranking') {
+      const vehicles = new Set(input.vehicleIds);
+      const counts = new Map();
+      rows.filter(row => String(row[1]).startsWith(input.period)).forEach(row => {
+        const x = JSON.parse(row[2]);
+        if (x.kind !== input.kind || !vehicles.has(x.vehicleId) || !x.inspector || !x.inspector.id) return;
+        const entry = counts.get(x.inspector.id) || { name: x.inspector.name, count: 0 };
+        entry.count++;
+        counts.set(x.inspector.id, entry);
+      });
+      return result(Array.from(counts.values()));
+    }
     if (action === 'inspection-summary') {
       return result(rows.filter(row => String(row[1]).startsWith(input.period)).map(row => {
         const x = JSON.parse(row[2]);

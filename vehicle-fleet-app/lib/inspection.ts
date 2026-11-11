@@ -30,3 +30,7 @@ export type InspectionDetail = InspectionRow & {
   photoId?: string; answers: unknown; note: string;
   decision?: { by: string; at: string; note: string };
 };
+
+export function inspectionSearch(value: string) {
+  return value.normalize('NFKC').toLocaleLowerCase('th').replace(/[\s\p{P}]+/gu, '');
+}

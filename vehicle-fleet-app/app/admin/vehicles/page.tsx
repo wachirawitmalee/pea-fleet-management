@@ -20,7 +20,7 @@ export default function AdminVehiclesPage() {
 
   const [formData, setFormData] = useState({
     vehicleId: '', plateNumber: '', brand: '', model: '', year: '', type: '', department: '',
-    qrCodeData: '', vehicleStatus: 'AVAILABLE', currentMileage: '0', isBookable: true,
+    qrCodeData: '', vehicleStatus: 'AVAILABLE', currentMileage: '0', isBookable: true, inspectionEnabled: false,
     taxExpireDate: '', nextCheckDate: '', nextCheckMileage: ''
   });
 
@@ -39,7 +39,7 @@ export default function AdminVehiclesPage() {
     setFormData({
       vehicleId: '', plateNumber: '', brand: '', model: '', year: '', type: '', department: '',
       qrCodeData: `PEA-CAR-${Date.now()}`, vehicleStatus: 'AVAILABLE', currentMileage: '0', 
-      isBookable: true, taxExpireDate: '', nextCheckDate: '', nextCheckMileage: ''
+      isBookable: true, inspectionEnabled: false, taxExpireDate: '', nextCheckDate: '', nextCheckMileage: ''
     });
     setIsModalOpen(true);
   };
@@ -50,7 +50,7 @@ export default function AdminVehiclesPage() {
       vehicleId: v.vehicleId, plateNumber: v.plateNumber, brand: v.brand, model: v.model || '', 
       year: v.year || '', type: v.type || '', department: v.department || '', qrCodeData: v.qrCodeData, 
       vehicleStatus: v.vehicleStatus, currentMileage: v.currentMileage?.toString() || '0', 
-      isBookable: v.isBookable,
+      isBookable: v.isBookable, inspectionEnabled: v.inspectionEnabled === true,
       taxExpireDate: v.taxExpireDate ? new Date(v.taxExpireDate).toISOString().split('T')[0] : '',
       nextCheckDate: v.nextCheckDate ? new Date(v.nextCheckDate).toISOString().split('T')[0] : '',
       nextCheckMileage: v.nextCheckMileage?.toString() || ''
@@ -167,6 +167,7 @@ export default function AdminVehiclesPage() {
                         <td className="p-4 font-bold text-slate-800">{v.brand} {v.model}</td>
                         <td className="p-4 font-extrabold text-emerald-700">{v.currentMileage ? v.currentMileage.toLocaleString() : '0'} กม.</td>
                         <td className="p-4 space-y-1 text-xs">
+                          <div className={v.inspectionEnabled ? 'font-bold text-teal-800' : 'text-slate-500'}>{v.inspectionEnabled ? '✓ เข้าร่วม Inspection' : 'ไม่เข้าร่วม Inspection'}</div>
                           {v.isBookable ? <div className="text-indigo-700 font-extrabold">🟢 เปิดให้จองล่วงหน้า</div> : <div className="text-orange-700 font-extrabold">🟠 สแกนใช้งานเท่านั้น (Walk-in)</div>}
                           {v.taxExpireDate && <div className="text-slate-600 font-bold">ภาษี: {new Date(v.taxExpireDate).toLocaleDateString('th-TH')}</div>}
                         </td>
@@ -212,6 +213,10 @@ export default function AdminVehiclesPage() {
 
                 <div className="bg-indigo-50/50 p-5 rounded-2xl border-2 border-indigo-200 shadow-sm space-y-4">
                   <h4 className="text-sm font-extrabold text-indigo-900 mb-2">⚙️ การตั้งค่าระบบจองรถ</h4>
+                  <label className="flex items-start gap-3 rounded-xl border border-teal-200 bg-teal-50 p-3">
+                    <input type="checkbox" name="inspectionEnabled" checked={formData.inspectionEnabled} onChange={handleFormChange} className="mt-1 size-5 accent-teal-700" />
+                    <span><strong>เข้าร่วม Inspection</strong><span className="block text-xs text-slate-700">แสดงในแดชบอร์ดและแบบตรวจเมื่อเปิดใช้งาน ประวัติเดิมจะยังเก็บไว้</span></span>
+                  </label>
                   <label className="flex items-center gap-3 p-4 border border-indigo-300 rounded-xl bg-white cursor-pointer shadow-sm">
                     <input type="checkbox" name="isBookable" checked={formData.isBookable} onChange={handleFormChange} className="w-6 h-6 text-indigo-600 rounded focus:ring-indigo-500" />
                     <div><p className="font-extrabold text-indigo-900 text-lg">อนุญาตให้พนักงานจองรถคันนี้ล่วงหน้าได้</p></div>

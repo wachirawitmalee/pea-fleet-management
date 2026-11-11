@@ -154,7 +154,7 @@ export default function Home() {
             <h3 className="text-lg font-bold text-slate-800 mb-1">แจ้งซ่อม</h3><p className="text-slate-500 text-xs">รายงานปัญหา</p>
           </Link>
           <Link href="/inspection" className="rounded-[2rem] border border-white bg-white/70 p-6 text-center shadow-sm hover:shadow-lg">
-            <div aria-hidden="true" className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-100 text-2xl">✓</div>
+            <div aria-hidden="true" className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-100 text-teal-800 text-2xl font-black">✓</div>
             <h3 className="text-lg font-bold text-slate-800">Inspection</h3><p className="text-xs text-slate-500">ตรวจรถและก่อนเริ่มงาน</p>
           </Link>
           <Link href="/admin" className="group bg-white/70 backdrop-blur-md p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl hover:-translate-y-1 transition-all text-center">

@@ -1,8 +1,9 @@
+import { inspectionVehicleIds } from '@/lib/inspection-enrollment';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { googleCall, GoogleStorageError } from '@/lib/storage/google';
 import { parseMileage } from '@/lib/vehicle-mileage';
-import { categoryFor, inspectionDayValid, jobVehicleChecks, toolChecks, vehicleChecks, workerChecks, type InspectionDetail, type InspectionRow } from '@/lib/inspection';
+import { categoryFor, inspectionDayValid, inspectionSearch, jobVehicleChecks, toolChecks, vehicleChecks, workerChecks, type InspectionDetail, type InspectionRow } from '@/lib/inspection';
 
 const response = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'private, no-store' } });
 const error = (message: string, status = 400) => response({ error: message }, status);
@@ -42,14 +43,14 @@ export async function GET(request: Request) {
     const params = new URL(request.url).searchParams;
     const mode = params.get('mode');
     if (mode === 'lookup') {
-      const q = clean(params.get('q'), 80).toLocaleLowerCase('th');
-      if (q.length < 2) return response([]);
+      const q = inspectionSearch(clean(params.get('q'), 80));
       if (params.get('entity') === 'employee') {
         const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE' }, select: { employeeId: true, fullName: true } });
-        return response(employees.filter(e => e.employeeId.includes(q) || e.fullName.toLocaleLowerCase('th').includes(q)).slice(0, 12).map(e => ({ id: e.employeeId, label: e.fullName })));
+        return response(employees.filter(e => e.employeeId.includes(q) || inspectionSearch(e.fullName).includes(q)).sort((a,b) => a.fullName.localeCompare(b.fullName, 'th')).slice(0, q ? 12 : 6).map(e => ({ id: e.employeeId, label: e.fullName })));
       }
       const vehicles = await prisma.vehicle.findMany({ select: { vehicleId: true, plateNumber: true, brand: true, type: true } });
-      return response(vehicles.filter(v => (v.plateNumber + ' ' + v.brand).toLocaleLowerCase('th').includes(q)).slice(0, 12).map(v => ({ id: v.vehicleId, label: v.plateNumber + ' · ' + v.brand, category: categoryFor(v.type) })));
+      const enrolled = await inspectionVehicleIds();
+      return response(vehicles.filter(v => enrolled.has(v.vehicleId) && inspectionSearch(v.plateNumber + ' ' + v.brand).includes(q)).sort((a,b) => a.plateNumber.localeCompare(b.plateNumber, 'th')).slice(0, q ? 12 : 6).map(v => ({ id: v.vehicleId, label: v.plateNumber + ' · ' + v.brand, category: categoryFor(v.type) })));
     }
     if (mode === 'photo' || mode === 'detail') {
       const user = await actor(request);
@@ -67,12 +68,18 @@ export async function GET(request: Request) {
       return response({ ...detail, hasPhoto: !!photoId, canApprove: user.role === 'approver' && user.employeeId !== record.inspector.id });
     }
     const period = params.get('period');
-    if (!period || !/^\d{4}-\d{2}(-\d{2})?$/.test(period)) return error('เลือกวันหรือเดือนที่ต้องการดู');
+    if (!period || !/^\d{4}(?:-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?)?$/.test(period)) return error('เลือกวัน เดือน หรือปีที่ต้องการดู');
+    const enrolled = await inspectionVehicleIds();
+    if (mode === 'ranking') {
+      const user = await actor(request);
+      if (!user || !['manager','approver'].includes(user.role)) return error('กรุณายืนยันสิทธิ์ดูอันดับผู้ตรวจ', 401);
+      return response(await googleCall('inspection-ranking', { period, kind: params.get('kind'), vehicleIds: [...enrolled] }));
+    }
     const [rows, vehicles] = await Promise.all([
       googleCall<InspectionRow[]>('inspection-summary', { period }),
       prisma.vehicle.findMany({ select: { vehicleId: true, plateNumber: true, type: true } }),
     ]);
-    return response({ rows, vehicles: vehicles.map(v => ({ id: v.vehicleId, plate: v.plateNumber, category: categoryFor(v.type) })) });
+    return response({ rows: rows.filter(r => enrolled.has(r.vehicleId)), vehicles: vehicles.filter(v => enrolled.has(v.vehicleId)).map(v => ({ id: v.vehicleId, plate: v.plateNumber, category: categoryFor(v.type) })) });
   } catch (e) { return failed(e); }
 }
 
@@ -99,6 +106,7 @@ export async function POST(request: Request) {
       prisma.employee.findUnique({ where: { employeeId: clean(b.inspectorId, 100) }, select: employeeSelect }),
     ]);
     if (!vehicle || inspector?.status !== 'ACTIVE') return error('กรุณาเลือกรถและผู้ตรวจจากข้อมูลระบบ');
+    if (!(await inspectionVehicleIds()).has(vehicle.vehicleId)) return error('รถคันนี้ไม่ได้เข้าร่วม Inspection', 409);
     const category = categoryFor(vehicle.type);
     const photo = b.photo || null;
     if (photo && (typeof photo !== 'string' || photo.length > 3000000 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(photo))) return error('ไฟล์ภาพไม่ถูกต้อง');

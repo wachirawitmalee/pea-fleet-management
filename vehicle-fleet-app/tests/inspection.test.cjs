@@ -35,4 +35,9 @@ test('Inspection starts empty, preserves evidence and accepts only a separate ap
   assert.equal(run('decide',{id:record.id,decision:'approved',by:'B'}).ok,true);
   assert.equal(run('decide',{id:record.id,decision:'rejected',by:'B'}).code,'CONFLICT');
   assert.equal(run('detail',{id:record.id}).data.decision.by,'B');
+  const rank=run('ranking',{period:'2026-11',kind:'pre-job',vehicleIds:['vehicle']}).data;
+  assert.equal(rank.length,1);assert.equal(rank[0].name,'Private Name');assert.equal(rank[0].count,1);
+  assert.equal(run('ranking',{period:'2026-11',kind:'vehicle',vehicleIds:['vehicle']}).data.length,0);
+  assert.equal(run('ranking',{period:'2026-11',kind:'pre-job',vehicleIds:[]}).data.length,0);
+
 });

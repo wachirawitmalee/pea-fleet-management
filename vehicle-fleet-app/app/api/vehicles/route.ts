@@ -1,3 +1,4 @@
+import { inspectionVehicleIds, setInspectionEnrollment } from '@/lib/inspection-enrollment';
 import { currentVehicles } from '@/lib/current-vehicles';
 import { parseMileage } from '@/lib/vehicle-mileage';
 import { withStorage } from '@/lib/storage/sheets';
@@ -9,8 +10,8 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    const vehicles = await currentVehicles();
-    return NextResponse.json(vehicles);
+    const [vehicles, enrolled] = await Promise.all([currentVehicles(), inspectionVehicleIds()]);
+    return NextResponse.json(vehicles.map(v => ({ ...v, inspectionEnabled: enrolled.has(v.vehicleId) })));
   } catch (error) {
     return NextResponse.json({ error: 'ไม่สามารถดึงข้อมูลรถยนต์ได้' }, { status: 500 });
   }
@@ -33,6 +34,7 @@ async function handlePOST(request: Request) {
         currentMileage: parsedMileage,
       }
     });
+    if (body.inspectionEnabled === true) await setInspectionEnrollment(vehicle.vehicleId, true);
     return NextResponse.json({ success: true, data: vehicle }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'ไม่สามารถเพิ่มข้อมูลรถยนต์ได้' }, { status: 500 });
@@ -60,6 +62,7 @@ async function handlePUT(request: Request) {
         currentMileage: parsedMileage,
       }
     });
+    if (typeof body.inspectionEnabled === 'boolean') await setInspectionEnrollment(vehicleId, body.inspectionEnabled);
     return NextResponse.json({ success: true, data: vehicle });
   } catch (error) {
     return NextResponse.json({ error: 'ไม่สามารถอัปเดตข้อมูลรถยนต์ได้' }, { status: 500 });
@@ -73,6 +76,7 @@ async function handleDELETE(request: Request) {
     if (!id) return NextResponse.json({ error: 'ไม่พบรหัสรถยนต์' }, { status: 400 });
 
     await prisma.vehicle.delete({ where: { vehicleId: id } });
+    await setInspectionEnrollment(id, false);
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'ไม่สามารถลบรถยนต์ได้ เนื่องจากมีประวัติการจองผูกอยู่' }, { status: 500 });

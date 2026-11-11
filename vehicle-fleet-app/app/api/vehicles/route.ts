@@ -1,3 +1,5 @@
+import { fleetBranch } from '@/lib/fleet-branches';
+import { vehicleBranches, setVehicleBranch, vehicleBranchKey } from '@/lib/vehicle-branches';
 import { inspectionVehicleIds, setInspectionEnrollment } from '@/lib/inspection-enrollment';
 import { currentVehicles } from '@/lib/current-vehicles';
 import { parseMileage } from '@/lib/vehicle-mileage';
@@ -10,8 +12,8 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    const [vehicles, enrolled] = await Promise.all([currentVehicles(), inspectionVehicleIds()]);
-    return NextResponse.json(vehicles.map(v => ({ ...v, inspectionEnabled: enrolled.has(v.vehicleId) })));
+    const [vehicles, enrolled, branches] = await Promise.all([currentVehicles(), inspectionVehicleIds(), vehicleBranches()]);
+    return NextResponse.json(vehicles.map(v => ({ ...v, branch: fleetBranch(branches.get(v.vehicleId)), inspectionEnabled: enrolled.has(v.vehicleId) })));
   } catch (error) {
     return NextResponse.json({ error: 'ไม่สามารถดึงข้อมูลรถยนต์ได้' }, { status: 500 });
   }
@@ -34,6 +36,7 @@ async function handlePOST(request: Request) {
         currentMileage: parsedMileage,
       }
     });
+    await setVehicleBranch(vehicle.vehicleId, body.branch);
     if (body.inspectionEnabled === true) await setInspectionEnrollment(vehicle.vehicleId, true);
     return NextResponse.json({ success: true, data: vehicle }, { status: 201 });
   } catch (error) {
@@ -62,6 +65,7 @@ async function handlePUT(request: Request) {
         currentMileage: parsedMileage,
       }
     });
+    if (body.branch !== undefined) await setVehicleBranch(vehicleId, body.branch);
     if (typeof body.inspectionEnabled === 'boolean') await setInspectionEnrollment(vehicleId, body.inspectionEnabled);
     return NextResponse.json({ success: true, data: vehicle });
   } catch (error) {
@@ -77,6 +81,7 @@ async function handleDELETE(request: Request) {
 
     await prisma.vehicle.delete({ where: { vehicleId: id } });
     await setInspectionEnrollment(id, false);
+    await prisma.systemSetting.deleteMany({ where: { id: vehicleBranchKey(id) } });
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'ไม่สามารถลบรถยนต์ได้ เนื่องจากมีประวัติการจองผูกอยู่' }, { status: 500 });

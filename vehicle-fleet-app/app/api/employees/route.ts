@@ -1,3 +1,4 @@
+import { fleetBranch } from '@/lib/fleet-branches';
 import { withStorage } from '@/lib/storage/sheets';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const employees = await prisma.employee.findMany({ orderBy: { employeeId: 'asc' } });
-    return NextResponse.json(employees);
+    return NextResponse.json(employees.map(e=>({...e,workPlace:fleetBranch(e.workPlace)})));
   } catch (error) {
     return NextResponse.json({ error: 'ไม่สามารถดึงข้อมูลพนักงานได้' }, { status: 500 });
   }
@@ -27,7 +28,7 @@ async function handlePOST(request: Request) {
     const employee = await prisma.employee.create({
       data: { 
         employeeId, fullName, position, department, 
-        workPlace: workPlace || "กฟส.ระโนด", 
+        workPlace: fleetBranch(workPlace),
         status: "ACTIVE" 
       }
     });
@@ -50,7 +51,7 @@ async function handlePUT(request: Request) {
         fullName, 
         position, 
         department, 
-        workPlace: workPlace || "กฟส.ระโนด",
+        workPlace: workPlace === undefined ? undefined : fleetBranch(workPlace),
         // ถ้าไม่มีการส่ง status มาให้ใช้ค่าเดิม (เพื่อป้องกัน Error)
         status: status !== undefined ? status : undefined 
       }

@@ -1,8 +1,13 @@
+import { localGoogleCall, localPreviewEnabled } from './local-preview';
 export class GoogleStorageError extends Error {
   constructor(message: string, public code: string) { super(message); }
 }
 
 export async function googleCall<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+  if (localPreviewEnabled()) {
+    try { return localGoogleCall<T>(action, payload); }
+    catch (e) { if (e && typeof e === 'object' && 'code' in e && e.code === 'CONFLICT') throw new GoogleStorageError('Preview changed', 'CONFLICT'); throw e; }
+  }
   const url = process.env.GOOGLE_APPS_SCRIPT_URL;
   const secret = process.env.GOOGLE_STORAGE_SECRET;
   if (!url || !secret || secret.length < 32) throw new GoogleStorageError('Google storage configuration is missing', 'CONFIG');

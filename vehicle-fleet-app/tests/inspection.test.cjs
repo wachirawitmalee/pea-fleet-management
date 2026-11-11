@@ -41,3 +41,21 @@ test('Inspection starts empty, preserves evidence and accepts only a separate ap
   assert.equal(run('ranking',{period:'2026-11',kind:'pre-job',vehicleIds:[]}).data.length,0);
 
 });
+
+test('Teams daily card counts each enrolled vehicle once and separates missing plates by branch',()=>{
+  const ctx={};vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync('google-apps-script/InspectionTeams.gs','utf8'),ctx);
+  const fleet=ctx.inspectionTeamsFleet_({
+    vehicle:[{vehicleId:'a',plateNumber:'A-111'},{vehicleId:'b',plateNumber:'B-222'},{vehicleId:'c',plateNumber:'C-333'}],
+    systemSetting:[{id:'inspection-vehicle:a'},{id:'inspection-vehicle:b'},{id:'vehicle-branch:b',alertEmail:'กฟส.สทิงพระ'}]
+  });
+  const day='2026-11-11';
+  const r=ctx.inspectionTeamsDailyCard_(day,fleet,[
+    {kind:'vehicle',date:day,vehicleId:'a'},{kind:'vehicle',date:day,vehicleId:'a'},{kind:'pre-job',date:day,vehicleId:'b'}
+  ]);
+  const body=r.attachments[0].content.body;
+  assert.equal(body[2].facts[0].value,'1 คัน');
+  assert.equal(body[2].facts[1].value,'1 คัน');
+  const encoded=JSON.stringify(r);
+  assert.ok(encoded.includes('กฟส.สทิงพระ'));assert.ok(encoded.includes('B-222'));assert.ok(!encoded.includes('C-333'));
+});

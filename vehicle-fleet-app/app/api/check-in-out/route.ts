@@ -1,3 +1,4 @@
+import { adminFromRequest } from '@/lib/admin-auth';
 import { canHandover, handoverNote } from '@/lib/vehicle-handover';
 import { recordLateUsage } from '@/lib/late-usage';
 import { bookingTime } from '@/lib/fleet-time';
@@ -19,6 +20,7 @@ async function handlePOST(request: Request) {
     const body = await request.json();
     if (body.type === 'LATE') return recordLateUsage(body);
     const adminReturn = body.type === 'ADMIN_RETURN';
+    if (adminReturn && !await adminFromRequest(request)) return NextResponse.json({error:'กรุณาเข้าสู่ระบบแอดมิน'}, {status:401});
     const targetLog = adminReturn && typeof body.logId === 'string' ? await prisma.checkInOutLog.findUnique({ where: { logId: body.logId } }) : null;
     if (adminReturn && !targetLog) return NextResponse.json({ error: 'ไม่พบรายการรับรถ' }, { status: 404 });
     if (adminReturn && targetLog?.checkOutTime) return NextResponse.json({ error: 'รายการนี้คืนรถแล้ว กรุณาโหลดข้อมูลใหม่' }, { status: 409 });

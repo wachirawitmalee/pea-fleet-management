@@ -6,7 +6,16 @@ function doPost(e) {
     const properties = PropertiesService.getScriptProperties();
     const secret = properties.getProperty('STORAGE_SECRET');
     if (!secret || secret.length < 32 || input.secret !== secret) return output_({ ok: false, code: 'AUTH', error: 'Unauthorized' });
-    if (typeof input.action === 'string' && input.action.startsWith('inspection-')) return inspection_(input, properties);
+    if (input.action === 'inspection-configure-teams') {
+      if (typeof input.url !== 'string' || input.url.length > 1500 || !/^https:\/\/[a-z0-9.-]+\.api\.powerplatform\.com(?::443)?\/powerautomate\/[^\s]+$/.test(input.url)) throw new Error('Invalid Inspection Teams URL');
+      properties.setProperty('INSPECTION_TEAMS_URL', input.url);
+      return output_({ ok: true, data: { configured: true } });
+    }
+    if (typeof input.action === 'string' && input.action.startsWith('inspection-')) {
+      const result = inspection_(input, properties);
+      if (input.action === 'inspection-save' && JSON.parse(result.getContent()).ok) inspectionTeamsNotify_(input.record.id, properties);
+      return result;
+    }
     if (input.action === 'upload') return output_({ ok: true, data: upload_(input, properties) });
     if (input.action === 'photo') return output_({ ok: true, data: photo_(input, properties) });
     const lock = LockService.getScriptLock();

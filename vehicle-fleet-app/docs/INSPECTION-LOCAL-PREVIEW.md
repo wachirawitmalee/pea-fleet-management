@@ -1,0 +1,8 @@
+# Inspection branch / Teams preview
+
+Local writable preview uses only synthetic records in the ignored backups/fleet-preview-local.json. Set FLEET_LOCAL_PREVIEW=true, DATA_BACKEND=google-sheets, FLEET_READ_ONLY=false and bind to loopback in development. No Google requests or real Teams sends occur in this mode.
+
+- Employee branch uses workPlace; vehicle branch uses vehicle-branch settings. Missing or unrecognized branch is treated as กฟส.ระโนด without rewriting existing records. Branches are not separate security realms.
+- Configure FLEET_SUPER_ADMIN_PASSWORD and a random FLEET_SESSION_SECRET as server-only production secrets before deployment. The legacy password is only a local preview fallback; it was embedded in the former client and should be rotated before enabling production authentication. New administrators use active employee IDs and independent passwords; only the super administrator can grant or revoke them.
+- After approval, add InspectionTeams.gs to the existing Google project, update the authenticated Code.gs inspection dispatch, set INSPECTION_TEAMS_URL as a Script Property (or use the existing authenticated inspection-configure-teams action if the settings UI is read-only), run enableInspectionTeams, and update the existing deployment version. Do not put the signed URL in source control. The new workflow is independent of booking notifications.
+- Inspection records send after persistence, with a scheduled retry for explicit delivery errors. Daily summary is once in the 14:00–15:00 Bangkok window. It counts distinct enrolled vehicles with vehicle inspections that day and lists missing plates by branch.

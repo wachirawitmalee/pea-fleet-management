@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { branches, fleetBranch, type Branch } from '@/lib/fleet-branches';
 import Swal from 'sweetalert2';
 import { vehicleUrl } from '@/lib/vehicle-qr';
 
 export default function AdminVehiclesPage() {
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<Branch>(branches[0]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -19,7 +21,7 @@ export default function AdminVehiclesPage() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    vehicleId: '', plateNumber: '', brand: '', model: '', year: '', type: '', department: '',
+    branch: branches[0] as Branch, vehicleId: '', plateNumber: '', brand: '', model: '', year: '', type: '', department: '',
     qrCodeData: '', vehicleStatus: 'AVAILABLE', currentMileage: '0', isBookable: true, inspectionEnabled: false,
     taxExpireDate: '', nextCheckDate: '', nextCheckMileage: ''
   });
@@ -37,7 +39,7 @@ export default function AdminVehiclesPage() {
   const openAddModal = () => {
     setIsEditing(false);
     setFormData({
-      vehicleId: '', plateNumber: '', brand: '', model: '', year: '', type: '', department: '',
+      branch: selectedBranch, vehicleId: '', plateNumber: '', brand: '', model: '', year: '', type: '', department: '',
       qrCodeData: `PEA-CAR-${Date.now()}`, vehicleStatus: 'AVAILABLE', currentMileage: '0', 
       isBookable: true, inspectionEnabled: false, taxExpireDate: '', nextCheckDate: '', nextCheckMileage: ''
     });
@@ -47,7 +49,7 @@ export default function AdminVehiclesPage() {
   const openEditModal = (v: any) => {
     setIsEditing(true);
     setFormData({
-      vehicleId: v.vehicleId, plateNumber: v.plateNumber, brand: v.brand, model: v.model || '', 
+      branch: fleetBranch(v.branch), vehicleId: v.vehicleId, plateNumber: v.plateNumber, brand: v.brand, model: v.model || '',
       year: v.year || '', type: v.type || '', department: v.department || '', qrCodeData: v.qrCodeData, 
       vehicleStatus: v.vehicleStatus, currentMileage: v.currentMileage?.toString() || '0', 
       isBookable: v.isBookable, inspectionEnabled: v.inspectionEnabled === true,
@@ -124,10 +126,10 @@ export default function AdminVehiclesPage() {
     } catch (e) { console.error(e); } finally { setIsHistoryLoading(false); }
   };
 
-  const filteredVehicles = vehicles.filter(v => 
+  const filteredVehicles = vehicles.filter(v => fleetBranch(v.branch) === selectedBranch && (
     v.plateNumber.toLowerCase().includes(searchQuery.toLowerCase()) || 
     v.brand.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (v.model && v.model.toLowerCase().includes(searchQuery.toLowerCase()))
+    (v.model && v.model.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   return (
@@ -148,6 +150,7 @@ export default function AdminVehiclesPage() {
         </div>
 
         <div className="bg-white rounded-3xl border border-slate-300 shadow-sm overflow-hidden">
+          <nav aria-label="เลือก กฟฟ." className="mb-4 flex flex-wrap gap-2">{branches.map(branch => <button type="button" key={branch} aria-pressed={selectedBranch===branch} onClick={()=>setSelectedBranch(branch)} className={`rounded-xl border px-4 py-2 font-bold ${selectedBranch===branch?'bg-indigo-700 text-white':'border-slate-200 bg-white text-slate-900'}`}>{branch}</button>)}</nav>
           {isLoading ? (<div className="p-12 text-center text-emerald-600 font-bold animate-pulse">กำลังโหลดข้อมูล...</div>) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -212,10 +215,11 @@ export default function AdminVehiclesPage() {
                 </div>
 
                 <div className="bg-indigo-50/50 p-5 rounded-2xl border-2 border-indigo-200 shadow-sm space-y-4">
+                  <label className="mb-3 block font-bold text-slate-950">กฟฟ. / สาขา<select name="branch" value={formData.branch} onChange={handleFormChange} className="mt-1 block w-full rounded-xl border border-slate-300 bg-white p-3">{branches.map(b=><option key={b}>{b}</option>)}</select></label>
                   <h4 className="text-sm font-extrabold text-indigo-900 mb-2">⚙️ การตั้งค่าระบบจองรถ</h4>
                   <label className="flex items-start gap-3 rounded-xl border border-teal-200 bg-teal-50 p-3">
                     <input type="checkbox" name="inspectionEnabled" checked={formData.inspectionEnabled} onChange={handleFormChange} className="mt-1 size-5 accent-teal-700" />
-                    <span><strong>เข้าร่วม Inspection</strong><span className="block text-xs text-slate-700">แสดงในแดชบอร์ดและแบบตรวจเมื่อเปิดใช้งาน ประวัติเดิมจะยังเก็บไว้</span></span>
+                    <span><strong className="text-slate-950">เข้าร่วม Inspection</strong><span className="block text-xs text-slate-700">แสดงในแดชบอร์ดและแบบตรวจเมื่อเปิดใช้งาน ประวัติเดิมจะยังเก็บไว้</span></span>
                   </label>
                   <label className="flex items-center gap-3 p-4 border border-indigo-300 rounded-xl bg-white cursor-pointer shadow-sm">
                     <input type="checkbox" name="isBookable" checked={formData.isBookable} onChange={handleFormChange} className="w-6 h-6 text-indigo-600 rounded focus:ring-indigo-500" />

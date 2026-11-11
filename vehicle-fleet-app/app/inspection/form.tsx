@@ -61,7 +61,7 @@ function Checklist({ labels, answers, onChange, people = false }: { labels: read
   })}</div>;
 }
 
-export default function InspectionForm({ kind }: { kind: InspectionKind }) {
+export default function InspectionForm({ kind, fromField = false }: { kind: InspectionKind; fromField?: boolean }) {
   const vehicleOnly = kind === 'vehicle';
   const [date, setDate] = useState('');
   const [vehicle, setVehicle] = useState<Option | null>(null);
@@ -115,9 +115,9 @@ export default function InspectionForm({ kind }: { kind: InspectionKind }) {
     finally { setBusy(false); }
   }
   return <div className="min-h-screen bg-[#f5f7fb]"><main className="mx-auto max-w-4xl space-y-5 px-4 py-6 text-slate-900 sm:py-10">
-    <Link href="/inspection" className="font-semibold text-violet-700">← Inspection</Link>
+    <Link href={fromField ? "/inspection/field" : "/inspection"} className="font-semibold text-violet-700">← {fromField ? "เมนูตรวจหน้างาน" : "Inspection"}</Link>
     <header className="rounded-3xl border border-violet-100 bg-gradient-to-br from-white via-white to-violet-100 p-6 sm:p-8"><p className="mb-2 text-xs font-bold tracking-widest text-violet-700">INSPECTION · สาขาระโนด</p><h1 className="flex items-center gap-3 text-3xl font-extrabold tracking-tight"><span className="rounded-xl bg-violet-100 p-2 text-violet-800"><Icon name={vehicleOnly ? 'car' : 'list'} /></span>{vehicleOnly ? 'ตรวจสภาพยานพาหนะ' : 'ตรวจความพร้อมก่อนเริ่มงาน'}</h1><p className="mt-2 text-slate-600">เลือกข้อมูลจากระบบ แล้วบันทึกผลตรวจและรูปหลักฐาน</p></header>
-    {saved ? <section className={boxClass} role="status"><h2 className="text-xl font-bold text-emerald-800">บันทึกผลตรวจแล้ว</h2><p>{saved.ready ? 'ผลตรวจ: พร้อม' : 'ผลตรวจ: พบข้อที่ต้องติดตาม'}</p>{saved.approval && <p className="font-bold text-amber-800">รออนุมัติ — ยังไม่ได้รับอนุญาตให้เริ่มงานจากระบบนี้</p>}<p className="break-all text-sm">เลขอ้างอิง {saved.id}</p><Link href="/inspection/dashboard" className="text-violet-700 underline">ดูแดชบอร์ด</Link></section> :
+    {saved ? <section className={boxClass} role="status"><h2 className="text-xl font-bold text-emerald-800">บันทึกผลตรวจแล้ว</h2><p>{saved.ready ? 'ผลตรวจ: พร้อม' : 'ผลตรวจ: พบข้อที่ต้องติดตาม'}</p>{saved.approval && <p className="font-bold text-amber-800">รออนุมัติ — ยังไม่ได้รับอนุญาตให้เริ่มงานจากระบบนี้</p>}<p className="break-all text-sm">เลขอ้างอิง {saved.id}</p><Link href={fromField ? "/inspection/field" : "/inspection/dashboard"} className="text-violet-700 underline">{fromField ? "กลับเมนูตรวจหน้างาน" : "ดูแดชบอร์ด"}</Link></section> :
       <><ol aria-label="ขั้นตอนบันทึกผลตรวจ" className="grid grid-cols-2 gap-3 text-sm font-bold">{['ข้อมูลผู้ตรวจและรถ','รายการตรวจและหลักฐาน'].map((label,i) => <li key={label} aria-current={step === i+1 ? 'step' : undefined} className={`rounded-xl border px-3 py-3 ${step === i+1 ? 'border-violet-200 bg-violet-100 text-violet-900' : 'border-slate-200 bg-white text-slate-600'}`}>{i+1}. {label}</li>)}</ol>
       {step === 1 ? <form className={boxClass} onSubmit={next}>
         <label className="block font-semibold">วันที่ตรวจ<input className={inputClass} type="date" value={date} max={thaiInspectionDay()} onChange={e => setDate(e.target.value)} /><span className="text-sm text-slate-600">หากไม่เลือก จะใช้วันนี้ตามเวลาไทย</span></label>

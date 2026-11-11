@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { branches, fleetBranch, type Branch } from '@/lib/fleet-branches';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 
@@ -10,6 +11,7 @@ import { showLoading, showSuccess, showError } from '@/lib/alert';
 
 export default function AdminEmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<Branch>(branches[0]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,7 +45,7 @@ export default function AdminEmployeesPage() {
   const openAddSingleModal = () => {
     setIsEditingSingle(false);
     setSingleFormData({
-      employeeId: '', fullName: '', position: '', department: '', workPlace: 'กฟส.ระโนด', status: 'ACTIVE'
+      employeeId: '', fullName: '', position: '', department: '', workPlace: selectedBranch, status: 'ACTIVE'
     });
     setIsSingleModalOpen(true);
   };
@@ -55,7 +57,7 @@ export default function AdminEmployeesPage() {
       fullName: emp.fullName,
       position: emp.position,
       department: emp.department,
-      workPlace: emp.workPlace || 'กฟส.ระโนด',
+      workPlace: fleetBranch(emp.workPlace),
       status: emp.status || 'ACTIVE'
     });
     setIsSingleModalOpen(true);
@@ -199,8 +201,8 @@ export default function AdminEmployeesPage() {
     }
   };
 
-  const filteredEmployees = employees.filter(emp => 
-    emp.fullName.toLowerCase().includes(searchQuery.toLowerCase()) || emp.employeeId.includes(searchQuery)
+  const filteredEmployees = employees.filter(emp => fleetBranch(emp.workPlace) === selectedBranch && (
+    emp.fullName.toLowerCase().includes(searchQuery.toLowerCase()) || emp.employeeId.includes(searchQuery))
   );
 
   return (
@@ -230,6 +232,7 @@ export default function AdminEmployeesPage() {
         </div>
 
         <div className="bg-white rounded-3xl border border-slate-300 shadow-sm overflow-hidden">
+          <nav aria-label="เลือก กฟฟ." className="mb-4 flex flex-wrap gap-2">{branches.map(branch => <button type="button" key={branch} aria-pressed={selectedBranch===branch} onClick={()=>setSelectedBranch(branch)} className={`rounded-xl border px-4 py-2 font-bold ${selectedBranch===branch?'bg-indigo-700 text-white':'border-slate-200 bg-white text-slate-900'}`}>{branch}</button>)}</nav>
           {isLoading ? (
             <div className="p-12 text-center text-blue-600 font-bold animate-pulse">กำลังโหลดข้อมูล...</div>
           ) : (
@@ -299,6 +302,7 @@ export default function AdminEmployeesPage() {
                 <div>
                   <label className="block text-xs font-extrabold text-slate-700 mb-1">สังกัด / แผนก *</label>
                   <input type="text" name="department" required value={singleFormData.department} onChange={handleSingleFormChange} className="w-full p-3 border-2 border-slate-400 bg-white font-extrabold text-slate-900 rounded-xl outline-none focus:border-blue-500" />
+                  <label className="mt-3 block font-bold text-slate-950">กฟฟ. / สาขา<select name="workPlace" value={singleFormData.workPlace} onChange={handleSingleFormChange} className="mt-1 block w-full rounded-xl border border-slate-300 bg-white p-3">{branches.map(b=><option key={b}>{b}</option>)}</select></label>
                 </div>
                 
                 {/* 🌟 เพิ่มตัวเลือกสถานะการทำงานในกล่องแก้ไข */}

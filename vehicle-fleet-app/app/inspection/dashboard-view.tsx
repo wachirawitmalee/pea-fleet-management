@@ -1,4 +1,5 @@
 'use client';
+import { branches, fleetBranch } from '@/lib/fleet-branches';
 
 import Link from 'next/link';
 import InspectionRanking from './ranking';
@@ -7,7 +8,7 @@ import Icon, { type InspectionIconName } from './inspection-icon';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { inspectionSearch, thaiInspectionDay, type InspectionDetail, type InspectionKind, type InspectionRow, type VehicleCategory } from '@/lib/inspection';
 
-type Summary = { rows: InspectionRow[]; vehicles: { id: string; plate: string; category: VehicleCategory }[] };
+type Summary = { rows: InspectionRow[]; vehicles: { id: string; plate: string; branch?: string; category: VehicleCategory }[] };
 type Detail = Omit<InspectionDetail, 'photoId'> & { hasPhoto: boolean; canApprove: boolean };
 const field = 'block w-full rounded-xl border border-slate-300 bg-white p-3 text-base';
 const status = { pending: 'รออนุมัติ', approved: 'อนุญาต', rejected: 'ไม่อนุญาต' };
@@ -30,6 +31,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
   const [todayRows, setTodayRows] = useState<InspectionRow[]>([]);
   const [kind, setKind] = useState<InspectionKind>('vehicle');
   const [filter, setFilter] = useState('');
+  const [branch, setBranch] = useState('');
   const [category, setCategory] = useState('');
   const [fleetStatus, setFleetStatus] = useState('');
   const [result, setResult] = useState('');
@@ -65,7 +67,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
   useEffect(() => () => { if (photo) URL.revokeObjectURL(photo); }, [photo]);
 
   const summary = useMemo(() => {
-    const eligible = (data?.vehicles ?? []).filter(v => (!category || category === v.category) && inspectionSearch(v.plate).includes(inspectionSearch(filter)));
+    const eligible = (data?.vehicles ?? []).filter(v => (!branch || fleetBranch(v.branch)===branch) && (!category || category === v.category) && inspectionSearch(v.plate).includes(inspectionSearch(filter)));
     const ids = new Set(eligible.map(v => v.id));
     const all = (data?.rows ?? []).filter(r => r.kind === kind && ids.has(r.vehicleId)).sort((a,b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
     const latest = new Map<string, InspectionRow>();
@@ -77,14 +79,14 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
       row.failures.forEach(f => issues.set(f, (issues.get(f) ?? 0) + 1));
     }
     return { eligible, all, latest, counts, missing: eligible.filter(v => !latest.has(v.id)), issues: [...issues].sort((a,b) => b[1]-a[1]).slice(0,5), notReady: [...latest.values()].filter(r => !r.ready).length };
-  }, [data, kind, filter, category]);
+  }, [data, kind, filter, category, branch]);
   const todayLatest = new Map<string, InspectionRow>();
   for (const row of todayRows) {
     if (row.kind !== 'vehicle') continue;
     const previous = todayLatest.get(row.vehicleId);
     if (!previous || previous.createdAt < row.createdAt) todayLatest.set(row.vehicleId, row);
   }
-  const todayFleet = data?.vehicles ?? [];
+  const todayFleet = (data?.vehicles ?? []).filter(v=>!branch || fleetBranch(v.branch)===branch);
   const missingToday = todayFleet.filter(v => !todayLatest.has(v.id));
   const issuesToday = todayFleet.filter(v => todayLatest.get(v.id)?.ready === false);
   const normalToday = todayFleet.length - missingToday.length - issuesToday.length;
@@ -153,6 +155,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
         })}
       </nav>
     </section>
+    <label className="block max-w-xs text-sm font-bold">กฟฟ. / สาขา<select className={field} value={branch} onChange={e=>setBranch(e.target.value)}><option value="">ทุกสาขา</option>{branches.map(b=><option key={b}>{b}</option>)}</select></label>
     {view === 'today' ? (error ? <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">{error} <button className="underline" onClick={() => {setError('');setRevision(v=>v+1);}}>ลองใหม่</button></p> : !data ? <InspectionSkeleton /> : <>
       <section className="rounded-3xl border border-indigo-100 bg-gradient-to-br from-white via-indigo-50/70 to-teal-50 p-6 shadow-sm sm:p-8">
         <p className="text-xs font-bold tracking-widest text-indigo-700">สรุปการตรวจสภาพรถ · {today}</p>
@@ -217,7 +220,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
         </div>
       </section>
       <section className="rounded-2xl border border-slate-200 bg-white p-5"><h2 className="flex items-center gap-2 text-lg font-bold"><Icon name="alert" /> ข้อบกพร่องที่พบบ่อย</h2>{summary.issues.length ? <ul>{summary.issues.map(([label,n]) => <li key={label} className="mt-3 text-sm"><div className="flex justify-between gap-2"><span>{label}</span><span className="font-bold">{n} ครั้ง</span></div><div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-rose-400" style={{width:(100*n/summary.issues[0][1])+'%'}} /></div></li>)}</ul> : <p className="mt-2 text-sm text-slate-600">{summary.all.length ? 'ไม่พบข้อบกพร่องในช่วงที่เลือก' : 'ยังไม่มีผลตรวจสำหรับสรุปข้อบกพร่อง'}</p>}</section>
-      <InspectionRanking key={period+kind} period={period} kind={kind} />
+      <InspectionRanking key={period+kind+branch} period={period} kind={kind} branch={branch} />
       {historyVehicle && <section id="inspection-vehicle-history" tabIndex={-1} className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5" aria-label="วันที่ตรวจรายคัน">
         <div className="flex items-center justify-between gap-3"><h2 className="font-bold">วันที่ตรวจ · {summary.eligible.find(v => v.id === historyVehicle)?.plate ?? 'รถที่เลือก'}</h2><button className="text-sm font-bold text-indigo-800 underline" onClick={() => setHistoryVehicle(null)}>ปิด</button></div>
         <p className="mt-1 text-sm text-slate-600">เลือกวันที่หรือครั้งที่ตรวจเพื่อเปิดรายละเอียด</p>

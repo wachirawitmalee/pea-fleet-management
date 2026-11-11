@@ -1,3 +1,5 @@
+import { branches as allowedBranches, fleetBranch } from '@/lib/fleet-branches';
+import { vehicleBranches } from '@/lib/vehicle-branches';
 import { inspectionVehicleIds } from '@/lib/inspection-enrollment';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
@@ -71,15 +73,22 @@ export async function GET(request: Request) {
     if (!period || !/^\d{4}(?:-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?)?$/.test(period)) return error('เลือกวัน เดือน หรือปีที่ต้องการดู');
     const enrolled = await inspectionVehicleIds();
     if (mode === 'ranking') {
-      const user = await actor(request);
-      if (!user || !['manager','approver'].includes(user.role)) return error('กรุณายืนยันสิทธิ์ดูอันดับผู้ตรวจ', 401);
-      return response(await googleCall('inspection-ranking', { period, kind: params.get('kind'), vehicleIds: [...enrolled] }));
+      const kind = params.get('kind');
+      if (kind !== 'vehicle' && kind !== 'pre-job') return error('เลือกประเภทการตรวจ');
+      const branch = params.get('branch');
+      if (branch && !allowedBranches.some(value=>value===branch)) return error('สาขาไม่ถูกต้อง');
+      const assigned = branch ? await vehicleBranches() : null;
+      const vehicleIds = [...enrolled].filter(id=>!branch || fleetBranch(assigned?.get(id))===branch);
+      if (!vehicleIds.length) return response([]);
+      const ranking = await googleCall<{ name: string; count: number }[]>('inspection-ranking', { period, kind, vehicleIds });
+      return response(ranking.map(({name,count})=>({name,count})).sort((a,b)=>b.count-a.count));
     }
-    const [rows, vehicles] = await Promise.all([
+    const [rows, vehicles, branches] = await Promise.all([
       googleCall<InspectionRow[]>('inspection-summary', { period }),
       prisma.vehicle.findMany({ select: { vehicleId: true, plateNumber: true, type: true } }),
+      vehicleBranches(),
     ]);
-    return response({ rows: rows.filter(r => enrolled.has(r.vehicleId)), vehicles: vehicles.filter(v => enrolled.has(v.vehicleId)).map(v => ({ id: v.vehicleId, plate: v.plateNumber, category: categoryFor(v.type) })) });
+    return response({ rows: rows.filter(r => enrolled.has(r.vehicleId)), vehicles: vehicles.filter(v => enrolled.has(v.vehicleId)).map(v => ({ id: v.vehicleId, plate: v.plateNumber, branch: fleetBranch(branches.get(v.vehicleId)), category: categoryFor(v.type) })) });
   } catch (e) { return failed(e); }
 }
 

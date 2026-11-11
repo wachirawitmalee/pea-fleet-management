@@ -25,7 +25,11 @@ test('admin closes an old return without changing a newer trip; repeated repairs
  operate(stored,'checkInOutLog','create',{data:{logId:'new-log',reservationId:'next',vehicleId:'v',employeeId:'001',checkInTime:new Date('2026-10-15T05:00:00Z'),mileageOut:150}});
  stored.reservation[1].reservationStatus='CHECKED_IN';
  global.fetch=async(_,o)=>{const p=JSON.parse(o.body);if(p.action==='read')return Response.json({ok:true,data:{version:String(version),tables:stored}});assert.equal(p.version,String(version));stored={...stored,...p.tables};version++;return Response.json({ok:true,data:{}})};
- const run=b=>POST(new Request('http://localhost',{method:'POST',body:JSON.stringify(b)}));
+ const {loginAdmin,issueAdmin}=require('../lib/admin-auth.ts');
+ process.env.FLEET_SUPER_ADMIN_PASSWORD='Test-admin-password';
+ const auth=await loginAdmin('admin',process.env.FLEET_SUPER_ADMIN_PASSWORD);
+ const run=(b,admin=true)=>POST(new Request('http://localhost',{method:'POST',headers:admin?{cookie:'fleet-admin='+issueAdmin(auth)}:{},body:JSON.stringify(b)}));
+ assert.equal((await run({type:'ADMIN_RETURN',logId:'old-log'},false)).status,401);
  try {
   for(const input of [{actualReturn:'2026-02-30T11:00',mileage:140},{actualReturn:'2026-10-15T13:00',mileage:140},{actualReturn:'2026-10-15T11:00',mileage:160},{actualReturn:'2026-10-15T07:00',mileage:140}])assert.equal((await run({type:'ADMIN_RETURN',logId:'old-log',...input})).status,400);
   const vehicleBefore=JSON.stringify(stored.vehicle),nextBefore=JSON.stringify(stored.checkInOutLog[1]);

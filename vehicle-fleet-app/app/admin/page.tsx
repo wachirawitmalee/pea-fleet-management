@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 export default function AdminDashboard() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
+  const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
   const [stats, setStats] = useState({
     totalVehicles: 0, availableVehicles: 0, inUseVehicles: 0, totalReservations: 0,
@@ -17,14 +18,11 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (localStorage.getItem('isAdminLoggedIn') === 'true') {
-      setIsLoggedIn(true);
-      fetchDashboardData();
-    } else {
-      setIsLoading(false);
-    }
+    fetch('/api/admin/session').then(async r => {
+      if (r.ok) { const session=await r.json(); setRole(session.role); setIsLoggedIn(true); await fetchDashboardData(); }
+      else setIsLoading(false);
+    }).catch(()=>setIsLoading(false));
   }, []);
-
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
@@ -37,21 +35,18 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === '1234') {
-      localStorage.setItem('isAdminLoggedIn', 'true');
-      setIsLoggedIn(true);
-      Swal.fire({ icon: 'success', title: 'เข้าสู่ระบบสำเร็จ', showConfirmButton: false, timer: 1500, customClass: { popup: 'rounded-[2rem]' } });
-      fetchDashboardData(); 
-    } else {
-      Swal.fire({ icon: 'error', title: 'ข้อมูลไม่ถูกต้อง', confirmButtonColor: '#9333ea', customClass: { popup: 'rounded-[2rem]' } });
-    }
+    try {
+      const r=await fetch('/api/admin/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:username,password})});
+      const session=await r.json();
+      if (!r.ok) throw Error(session.error);
+      setRole(session.role); setIsLoggedIn(true); setPassword(''); await fetchDashboardData();
+    } catch(e) { Swal.fire({icon:'error',title:'เข้าสู่ระบบไม่สำเร็จ',text:e instanceof Error ? e.message : undefined}); }
   };
-
-  const handleLogout = () => {
-    localStorage.removeItem('isAdminLoggedIn');
-    setIsLoggedIn(false); setUsername(''); setPassword('');
+  const handleLogout = async () => {
+    await fetch('/api/admin/session',{method:'DELETE'});
+    setRole(''); setIsLoggedIn(false); setUsername(''); setPassword('');
   };
 
   if (!isLoggedIn) {
@@ -62,7 +57,7 @@ export default function AdminDashboard() {
         <div className="bg-white/80 backdrop-blur-xl p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] w-full max-w-md relative z-10 border border-white">
           <div className="text-center mb-8"><div className="w-16 h-16 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg"><svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></div><h2 className="text-3xl font-extrabold text-slate-800">Admin Login</h2></div>
           <form onSubmit={handleLogin} className="space-y-5">
-            <div><label className="block text-sm font-bold text-slate-700 mb-2">Username</label><input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold focus:ring-2 focus:ring-purple-500 outline-none transition-all" /></div>
+            <div><label className="block text-sm font-bold text-slate-700 mb-2">ชื่อเข้าใช้ / รหัสพนักงาน</label><input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold focus:ring-2 focus:ring-purple-500 outline-none transition-all" /></div>
             <div><label className="block text-sm font-bold text-slate-700 mb-2">Password</label><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 font-bold focus:ring-2 focus:ring-purple-500 outline-none transition-all" /></div>
             <button type="submit" className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-xl transition-all shadow-md mt-4">เข้าสู่ระบบ</button>
           </form>
@@ -88,6 +83,7 @@ export default function AdminDashboard() {
           <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="w-2 h-6 bg-purple-600 rounded-full"></span> เมนูจัดการข้อมูล (Management)</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
+            {role === 'super' && <Link href="/admin/accounts" className="block rounded-2xl border border-indigo-200 bg-indigo-50 p-6 font-bold text-indigo-950">จัดการบัญชีแอดมิน<span className="mt-1 block text-sm font-normal">เลือกพนักงานและตั้งรหัสผ่าน</span></Link>}
             <Link href="/admin/employees" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-purple-400 transition-all cursor-pointer group block">
               <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div>
               <h3 className="font-bold text-lg text-slate-800 mb-1">จัดการพนักงาน</h3>

@@ -5,7 +5,7 @@ export const vehicleChecks = {
 } as const;
 export type VehicleCategory = keyof typeof vehicleChecks;
 export type InspectionKind = 'vehicle' | 'pre-job';
-export const workerChecks = ['ความพร้อมของผู้ปฏิบัติงาน','การแต่งกายและอุปกรณ์ป้องกันส่วนบุคคล (PPE)','การชี้แจงงานและความปลอดภัย'] as const;
+export const workerChecks = ['สวมเครื่องแบบ กฟภ.','ร่างกายพร้อม','อุปกรณ์ PPE'] as const;
 export const jobVehicleChecks = ['มีการตรวจยานพาหนะ (FM1-SOH3-S04-6103)','มีการตรวจรถยก (FM1-SOH3-S04-6104)','มีการตรวจเครนไฮดรอลิค (FM1-SOH3-S04-6105)'] as const;
 export const toolChecks = ['อุปกรณ์สื่อสาร','เครื่องมือปฏิบัติงาน'] as const;
 export function thaiInspectionDay(now = new Date()) {

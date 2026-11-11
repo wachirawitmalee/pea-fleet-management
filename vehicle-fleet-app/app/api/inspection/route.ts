@@ -109,6 +109,7 @@ export async function POST(request: Request) {
       if (!items || mileage === null) return error('ระบุเลขไมล์และผลตรวจทุกข้อ พร้อมสาเหตุของข้อผิดปกติ');
       if (category !== 'โฟล์คลิฟท์' && !photo) return error('กรุณาแนบภาพหลักฐาน');
       failures = items.filter(x => x.status === 'fail').map(x => x.label);
+      if (note) failures.push('มีหมายเหตุเร่งด่วน');
       ready = failures.length === 0;
       answers = { items, mileage };
     } else {

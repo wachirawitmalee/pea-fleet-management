@@ -1,0 +1,8 @@
+# Inspection operations
+
+- Shared QR: /inspection. Field forms: /inspection/vehicle and /inspection/pre-job.
+- Reports: /inspection/dashboard. Date and month use Asia/Bangkok. Summary omits names, photos, and free text.
+- The existing Google bridge checks STORAGE_SECRET before dispatching inspection-* actions. Inspection.gs uses a separate InspectionRecords tab in the same workbook. It creates the tab on first submission and does not import prior records. Drive evidence is stored in the designated private Inspection folder.
+- The production Apps Script editor may use a combined script. Insert the dispatch immediately after secret validation and add Inspection.gs (or append its content once to the existing script). Update the existing Web App deployment to a new version without changing the URL or access configuration. Do not run or replace setupSheets for this feature.
+- Detailed records and photographs require an access key. Configure the server-only INSPECTION_ACCESS_KEYS variable as a JSON object keyed by employee ID, where each entry has a 64-character lowercase SHA-256 digest (sha256) of an independently generated random base64url key of at least 32 characters, and role manager or approver. Distribute keys privately; do not commit raw keys. Without this setting detailed access and approvals are disabled. An employee must remain active. The inspector cannot approve their own record. New reports always enter the approval queue, and records with issues cannot be approved.
+- Vehicle issues are displayed and can prefill a repair report. They do not modify booking availability, active usage or vehicle mileage. Submit the repair report separately to create a ticket.

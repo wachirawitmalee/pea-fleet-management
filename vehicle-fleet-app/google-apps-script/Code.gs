@@ -6,6 +6,7 @@ function doPost(e) {
     const properties = PropertiesService.getScriptProperties();
     const secret = properties.getProperty('STORAGE_SECRET');
     if (!secret || secret.length < 32 || input.secret !== secret) return output_({ ok: false, code: 'AUTH', error: 'Unauthorized' });
+    if (typeof input.action === 'string' && input.action.startsWith('inspection-')) return inspection_(input, properties);
     if (input.action === 'upload') return output_({ ok: true, data: upload_(input, properties) });
     if (input.action === 'photo') return output_({ ok: true, data: photo_(input, properties) });
     const lock = LockService.getScriptLock();

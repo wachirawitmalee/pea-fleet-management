@@ -28,6 +28,11 @@ export default function ReportIssuePage() {
 
   useEffect(() => {
     fetchData();
+    const params = new URLSearchParams(window.location.search);
+    const inspectedVehicle = params.get('vehicleId');
+    const inspectionIssue = params.get('issue');
+    if (inspectedVehicle && /^[\w-]{1,100}$/.test(inspectedVehicle)) setVehicleId(inspectedVehicle);
+    if (inspectionIssue) setIssueDesc(inspectionIssue.slice(0, 600));
   }, []);
 
   const fetchData = async () => {

@@ -135,7 +135,7 @@ export default function Home() {
           <p className="text-lg text-slate-500 max-w-2xl mx-auto">จองรถล่วงหน้า ตรวจสอบคิว และสแกนรับ-คืนรถยนต์อย่างเป็นระบบ</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 max-w-6xl mx-auto mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 max-w-6xl mx-auto mb-16">
           <Link href="/reservation" className="group bg-white/70 backdrop-blur-md p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl hover:-translate-y-1 transition-all text-center">
             <div className="w-14 h-14 bg-purple-100 text-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-sm"><svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg></div>
             <h3 className="text-lg font-bold text-slate-800 mb-1">จองรถยนต์</h3><p className="text-slate-500 text-xs">ขอใช้รถล่วงหน้า</p>
@@ -152,6 +152,10 @@ export default function Home() {
           <Link href="/report-issue" className="group bg-white/70 backdrop-blur-md p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl hover:-translate-y-1 transition-all text-center">
             <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-sm"><svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.83-5.83M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div>
             <h3 className="text-lg font-bold text-slate-800 mb-1">แจ้งซ่อม</h3><p className="text-slate-500 text-xs">รายงานปัญหา</p>
+          </Link>
+          <Link href="/inspection" className="rounded-[2rem] border border-white bg-white/70 p-6 text-center shadow-sm hover:shadow-lg">
+            <div aria-hidden="true" className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-100 text-2xl">✓</div>
+            <h3 className="text-lg font-bold text-slate-800">Inspection</h3><p className="text-xs text-slate-500">ตรวจรถและก่อนเริ่มงาน</p>
           </Link>
           <Link href="/admin" className="group bg-white/70 backdrop-blur-md p-6 rounded-[2rem] border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-xl hover:-translate-y-1 transition-all text-center">
             <div className="w-14 h-14 bg-slate-800 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-sm"><svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg></div>

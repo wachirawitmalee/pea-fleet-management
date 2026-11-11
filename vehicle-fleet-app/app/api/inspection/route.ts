@@ -58,18 +58,21 @@ export async function GET(request: Request) {
       return response(vehicles.filter(v => enrolled.has(v.vehicleId) && inspectionSearch(v.plateNumber + ' ' + v.brand).includes(q)).sort((a,b) => a.plateNumber.localeCompare(b.plateNumber, 'th')).slice(0, q ? 12 : 6).map(v => ({ id: v.vehicleId, label: v.plateNumber + ' · ' + v.brand, category: enrolled.get(v.vehicleId) ?? categoryFor(v.type) })));
     }
     if (mode === 'photo' || mode === 'detail') {
-      const user = await actor(request);
-      if ((!user || !['manager','approver'].includes(user.role)) && !await adminFromRequest(request)) return error('กรุณายืนยันสิทธิ์ดูผลตรวจ', 401);
       const id = params.get('id');
       if (!id || !idFormat.test(id)) return error('รหัสรายการไม่ถูกต้อง');
+      const record = await googleCall<InspectionDetail | null>('inspection-detail', { id });
+      if (!record) return error('ไม่พบรายการตรวจ', 404);
+      const publicVehicle = record.kind === 'vehicle';
+      const user = publicVehicle ? null : await actor(request);
+      if (!publicVehicle && (!user || !['manager','approver'].includes(user.role)) && !await adminFromRequest(request)) return error('กรุณายืนยันสิทธิ์ดูผลตรวจ', 401);
       if (mode === 'photo') {
+        if (!record.photoId) return error('ไม่พบภาพ', 404);
         const pic = await googleCall<{ mime: string; data: string }>('inspection-photo', { id });
         if (!/^image\/(jpeg|png|webp)$/.test(pic.mime)) return error('ไม่พบภาพ', 404);
         return new Response(new Uint8Array(Buffer.from(pic.data, 'base64')), { headers: { 'Content-Type': pic.mime, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' } });
       }
-      const record = await googleCall<InspectionDetail | null>('inspection-detail', { id });
-      if (!record) return error('ไม่พบรายการตรวจ', 404);
       const { photoId, ...detail } = record;
+      if (publicVehicle) return response({ ...detail, inspector: { name: record.inspector.name }, hasPhoto: !!photoId, canApprove: false });
       return response({ ...detail, hasPhoto: !!photoId, canApprove: user?.role === 'approver' && user.employeeId !== record.inspector.id });
     }
     const period = params.get('period');

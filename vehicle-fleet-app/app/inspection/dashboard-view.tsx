@@ -9,10 +9,40 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { inspectionSearch, thaiInspectionDay, type InspectionDetail, type InspectionKind, type InspectionRow, type VehicleCategory } from '@/lib/inspection';
 
 type Summary = { rows: InspectionRow[]; vehicles: { id: string; plate: string; branch?: string; category: VehicleCategory }[] };
-type Detail = Omit<InspectionDetail, 'photoId'> & { hasPhoto: boolean; canApprove: boolean };
+type Detail = Omit<InspectionDetail, 'photoId' | 'inspector'> & { inspector: Pick<InspectionDetail['inspector'], 'name'>; hasPhoto: boolean; canApprove: boolean };
 const field = 'block w-full rounded-xl border border-slate-300 bg-white p-3 text-base';
 const status = { pending: 'รออนุมัติ', approved: 'อนุญาต', rejected: 'ไม่อนุญาต' };
 const kindLabel = { vehicle: 'ตรวจสภาพรถ', 'pre-job': 'ตรวจก่อนเริ่มงาน' };
+function VehicleDetail({ detail, photo, onPhotoError }: { detail: Detail; photo: string; onPhotoError: () => void }) {
+  const answers = detail.answers as { mileage?: number; items?: { label: string; status: 'pass' | 'fail'; note?: string }[] } | null;
+  const items = answers?.items ?? [];
+  return <div className="space-y-4">
+    <section className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+      <h3 className="flex items-center gap-2 font-bold text-indigo-900"><Icon name="person" /> ข้อมูลการตรวจ</h3>
+      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+        <div><dt className="text-slate-600">ผู้ตรวจ</dt><dd className="font-bold">{detail.inspector.name}</dd></div>
+        <div><dt className="text-slate-600">วันที่ตรวจ</dt><dd className="font-bold">{new Date(detail.date + 'T00:00:00+07:00').toLocaleDateString('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' })}</dd></div>
+        <div><dt className="text-slate-600">เลขไมล์</dt><dd className="font-bold">{typeof answers?.mileage === 'number' ? answers.mileage.toLocaleString('th-TH') + ' กม.' : '—'}</dd></div>
+      </dl>
+    </section>
+    {(detail.failures.length > 0 || detail.note) && <section className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-rose-950">
+      <h3 className="flex items-center gap-2 font-bold"><Icon name="alert" /> ข้อที่ต้องติดตาม</h3>
+      {detail.failures.length > 0 && <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{detail.failures.map((item, index) => <li key={index}>{item}</li>)}</ul>}
+      {detail.note && <p className="mt-2 whitespace-pre-wrap text-sm">หมายเหตุ: {detail.note}</p>}
+    </section>}
+    <section className="rounded-2xl border border-slate-200 p-4">
+      <h3 className="flex items-center gap-2 font-bold text-indigo-900"><Icon name="list" /> เช็กลิสต์รายข้อ</h3>
+      {items.length ? <ol className="mt-2 divide-y divide-slate-100">{items.map((item, index) => <li key={index} className="py-2.5">
+        <div className="flex items-start justify-between gap-2 text-sm"><span className="font-semibold">{index + 1}. {item.label}</span><span className={'shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ' + (item.status === 'fail' ? 'bg-rose-100 text-rose-900' : 'bg-teal-100 text-teal-900')}>{item.status === 'fail' ? 'ผิดปกติ' : 'ปกติ'}</span></div>
+        {item.note && <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{item.note}</p>}
+      </li>)}</ol> : <p className="mt-2 text-sm text-slate-600">รายการนี้ไม่มีผลตรวจรายข้อ</p>}
+    </section>
+    <section className="rounded-2xl border border-slate-200 p-4">
+      <h3 className="flex items-center gap-2 font-bold text-indigo-900"><Icon name="check" /> รูปหลักฐาน</h3>
+      {photo ? <img src={photo} alt="รูปหลักฐานการตรวจสภาพรถ" className="mt-3 max-h-96 w-full rounded-xl bg-slate-50 object-contain" onError={onPhotoError} /> : <p className="mt-2 text-sm text-slate-600">ไม่มีรูปแนบ</p>}
+    </section>
+  </div>;
+}
 function AnswerValue({ value }: { value: unknown }) {
   if (Array.isArray(value)) return <ul className="ml-5 list-disc space-y-1">{value.map((v,i) => <li key={i}><AnswerValue value={v} /></li>)}</ul>;
   if (value && typeof value === 'object') {
@@ -114,18 +144,28 @@ export default function Dashboard({ embedded = false, adminView = false }: { emb
   const fleet = summary.eligible.map(v => ({ ...v, latest: summary.latest.get(v.id), count: summary.counts.get(v.id) ?? 0 }))
     .sort((a,b) => (a.latest ? a.latest.ready ? 2 : 0 : 1) - (b.latest ? b.latest.ready ? 2 : 0 : 1) || a.plate.localeCompare(b.plate, 'th'))
     .filter(v => !fleetStatus || (fleetStatus === 'missing' ? !v.latest : fleetStatus === 'issues' ? v.latest && !v.latest.ready : v.latest?.ready));
-  const showDetail = (row: InspectionRow) => { setSelected(row); setDetail(null); setPhoto(''); setDetailError(''); setDecisionNote(''); };
+  const showDetail = (row: InspectionRow) => {
+    setSelected(row); setDetail(null); setPhoto(''); setDetailError(''); setDecisionNote('');
+    if (row.kind === 'vehicle') void loadDetail(row);
+  };
   const headers = { authorization: 'Bearer ' + key, 'x-inspection-employee': employee };
   async function openDetail(e?: FormEvent) {
-    e?.preventDefault(); if (!selected) return;
+    e?.preventDefault(); if (selected) await loadDetail(selected);
+  }
+  async function loadDetail(row: InspectionRow) {
     setBusy(true); setDetailError(''); setDetail(null); setPhoto('');
     try {
-      const r = await fetch('/api/inspection?' + new URLSearchParams({ mode:'detail', id:selected.id }), { headers });
+      const publicVehicle = row.kind === 'vehicle';
+      const r = await fetch('/api/inspection?' + new URLSearchParams({ mode:'detail', id:row.id }), { headers: publicVehicle ? undefined : headers });
       const body = await r.json(); if (!r.ok) throw new Error(body.error);
       setDetail(body);
       if (body.hasPhoto) {
-        const pic = await fetch('/api/inspection?' + new URLSearchParams({ mode:'photo', id:selected.id }), { headers });
-        if (pic.ok) setPhoto(URL.createObjectURL(await pic.blob())); else setDetailError('โหลดรูปหลักฐานไม่สำเร็จ');
+        const url = '/api/inspection?' + new URLSearchParams({ mode:'photo', id:row.id });
+        if (publicVehicle) setPhoto(url);
+        else {
+          const pic = await fetch(url, { headers });
+          if (pic.ok) setPhoto(URL.createObjectURL(await pic.blob())); else setDetailError('โหลดรูปหลักฐานไม่สำเร็จ');
+        }
       }
     } catch (e) { setDetailError(e instanceof Error ? e.message : 'เปิดผลตรวจไม่สำเร็จ'); }
     finally { setBusy(false); }
@@ -238,9 +278,9 @@ export default function Dashboard({ embedded = false, adminView = false }: { emb
         <p>{selected.date} · {selected.ready ? 'พร้อม' : 'พบปัญหา'}{selected.approval ? ' · '+status[detail?.approval ?? selected.approval] : ''}</p>
         {adminView && selected.kind === 'vehicle' && <Link href={'/admin/inspection/print/'+encodeURIComponent(selected.id)} className="inline-block rounded-xl bg-indigo-100 px-4 py-2 font-bold text-indigo-900">เปิดใบตรวจเพื่อพิมพ์</Link>}
         {!selected.ready && <Link href={'/report-issue?' + new URLSearchParams({ vehicleId:selected.vehicleId, issue:selected.failures.join(', ') })} className="inline-block font-bold text-red-800 underline">นำข้อบกพร่องไปกรอกใบแจ้งซ่อม</Link>}
-        {detail ? <><p className="font-semibold">ผู้ตรวจ: {detail.inspector.name}</p><AnswerValue value={detail.answers} />{detail.note && <p>หมายเหตุ: {detail.note}</p>}{photo && <img src={photo} alt="รูปหลักฐานการตรวจ" className="max-h-96 rounded-xl object-contain" />}
+        {detail ? <>{detail.kind === 'vehicle' ? <VehicleDetail detail={detail} photo={photo} onPhotoError={() => setDetailError('โหลดรูปหลักฐานไม่สำเร็จ')} /> : <><p className="font-semibold">ผู้ตรวจ: {detail.inspector.name}</p><AnswerValue value={detail.answers} />{detail.note && <p>หมายเหตุ: {detail.note}</p>}{photo && <img src={photo} alt="รูปหลักฐานการตรวจ" className="max-h-96 rounded-xl object-contain" onError={() => setDetailError('โหลดรูปหลักฐานไม่สำเร็จ')} />}</>}
           {detail.canApprove && detail.approval === 'pending' && <div className="space-y-2 border-t pt-3"><label>ข้อคิดเห็น / เหตุผล<input className={field} value={decisionNote} onChange={e => setDecisionNote(e.target.value)} /></label><div className="flex flex-wrap gap-3"><button disabled={busy || !detail.ready} className="rounded-xl bg-emerald-800 px-4 py-2 text-white disabled:opacity-50" onClick={() => decide('approved')}>อนุญาต</button><button disabled={busy || !decisionNote.trim()} className="rounded-xl bg-red-800 px-4 py-2 text-white disabled:opacity-50" onClick={() => decide('rejected')}>ไม่อนุญาต</button></div></div>}
-        </> : adminView ? <button type="button" disabled={busy} onClick={()=>openDetail()} className="rounded-xl bg-indigo-700 px-4 py-2 font-bold text-white">{busy ? 'กำลังโหลด…' : 'เปิดผลตรวจฉบับเต็ม'}</button> : <form className="space-y-3" onSubmit={openDetail}><p className="text-sm">ผู้มีสิทธิ์เท่านั้นจึงจะดูชื่อผู้ตรวจ ข้อมูลรายข้อและรูปหลักฐานได้</p><label>รหัสพนักงาน<input className={field} required value={employee} onChange={e => setEmployee(e.target.value)} /></label><label>คีย์สิทธิ์ Inspection<input className={field} required type="password" value={key} onChange={e => setKey(e.target.value)} /></label><button disabled={busy} className="rounded-xl bg-violet-800 px-4 py-2 text-white disabled:opacity-50">{busy ? <span className="inline-flex items-center gap-2"><Spinner /> กำลังตรวจสอบ…</span> : 'เปิดผลตรวจฉบับเต็ม'}</button></form>}
+        </> : selected.kind === 'vehicle' ? (busy ? <p role="status" className="flex items-center gap-2"><Spinner /> กำลังโหลดผลตรวจ…</p> : <button type="button" onClick={() => void loadDetail(selected)} className="font-bold text-violet-800 underline">โหลดผลตรวจอีกครั้ง</button>) : adminView ? <button type="button" disabled={busy} onClick={()=>openDetail()} className="rounded-xl bg-indigo-700 px-4 py-2 font-bold text-white">{busy ? 'กำลังโหลด…' : 'เปิดผลตรวจฉบับเต็ม'}</button> : <form className="space-y-3" onSubmit={openDetail}><p className="text-sm">ผู้มีสิทธิ์เท่านั้นจึงจะดูชื่อผู้ตรวจ ข้อมูลรายข้อและรูปหลักฐานได้</p><label>รหัสพนักงาน<input className={field} required value={employee} onChange={e => setEmployee(e.target.value)} /></label><label>คีย์สิทธิ์ Inspection<input className={field} required type="password" value={key} onChange={e => setKey(e.target.value)} /></label><button disabled={busy} className="rounded-xl bg-violet-800 px-4 py-2 text-white disabled:opacity-50">{busy ? <span className="inline-flex items-center gap-2"><Spinner /> กำลังตรวจสอบ…</span> : 'เปิดผลตรวจฉบับเต็ม'}</button></form>}
         {detailError && <p role="alert" className="text-red-800">{detailError}</p>}
       </div>
     </section>}

@@ -1,4 +1,4 @@
-export type InspectionIconName = 'car' | 'check' | 'alert' | 'clock' | 'chart' | 'filter' | 'list' | 'qr';
+export type InspectionIconName = 'car' | 'check' | 'alert' | 'clock' | 'chart' | 'filter' | 'list' | 'qr' | 'search' | 'lock' | 'person';
 
 const paths: Record<InspectionIconName, string> = {
   car: 'M5 17H3v-5l2-5a2 2 0 0 1 2-1h10a2 2 0 0 1 2 1l2 5v5h-2m-14 0v2m14-2v2M5 17h14M3 12h18M7 14.5h1m8 0h1',
@@ -9,6 +9,9 @@ const paths: Record<InspectionIconName, string> = {
   filter: 'M4 7h16M7 12h10m-7 5h4',
   list: 'M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01',
   qr: 'M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zm12 0h3v3h3v3h-6zm6 0h.01',
+  search: 'M21 21l-4.4-4.4M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z',
+  lock: 'M8 11V7a4 4 0 0 1 8 0v4M12 15v2M5 11h14v10H5z',
+  person: 'M16 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1',
 };
 
 export default function InspectionIcon({ name, className = 'size-5' }: { name: InspectionIconName; className?: string }) {

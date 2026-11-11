@@ -4,6 +4,15 @@ export const vehicleChecks = {
   'โฟล์คลิฟท์': ['ประเภท (ไฟฟ้า/น้ำมัน)','ระบบไฟฟ้า','ระบบเครื่องกล','ระบบคอนโทรล','เกียร์','ปั๊มไฮดรอลิค','สายไฮดรอลิค','น้ำมันไฮดรอลิค','PTO','กระบอกต่างๆ','เสาเครน','วิ้นซ์','สลิง','รอก','ฮุก','ไฟสัญญาณ','เกจชั่วโมง'],
 } as const;
 export type VehicleCategory = keyof typeof vehicleChecks;
+export const inspectionCategories = Object.keys(vehicleChecks) as VehicleCategory[];
+export const inspectionCategoryLabel: Record<VehicleCategory,string> = {
+  'รถยนต์': 'รถยนต์ / รถบรรทุก 2 ตัน / รถแก้ไฟ',
+  'เครน': 'เครนกระเช้า',
+  'โฟล์คลิฟท์': 'โฟล์คลิฟท์',
+};
+export function isInspectionCategory(value: unknown): value is VehicleCategory {
+  return typeof value === 'string' && Object.hasOwn(vehicleChecks, value);
+}
 export type InspectionKind = 'vehicle' | 'pre-job';
 export const workerChecks = ['สวมเครื่องแบบ กฟภ.','ร่างกายพร้อม','อุปกรณ์ PPE'] as const;
 export const jobVehicleChecks = ['มีการตรวจยานพาหนะ (FM1-SOH3-S04-6103)','มีการตรวจรถยก (FM1-SOH3-S04-6104)','มีการตรวจเครนไฮดรอลิค (FM1-SOH3-S04-6105)'] as const;

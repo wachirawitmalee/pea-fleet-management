@@ -37,6 +37,6 @@ export default async function InspectionPage() {
           </a>
         </nav>
     </section>
-    <section id="inspection-qr" className="mx-auto max-w-7xl px-4 pb-8 sm:px-6"><div className="flex flex-wrap items-center gap-6 rounded-2xl border border-slate-200 bg-white p-5"><img width={150} height={150} src={qr} alt="QR เปิดหน้าตรวจสำหรับช่าง" /><div><h2 className="font-bold">QR เดียวสำหรับทีมหน้างาน</h2><p className="my-2">สแกนเพื่อเปิดหน้าสำหรับช่าง มีเพียงสองเมนูตรวจ</p><a className="text-violet-700 underline" href={qr} download="smart-fleet-inspection.png">ดาวน์โหลด QR สำหรับพิมพ์</a><p className="mt-2 text-sm"><Link href="/inspection/field" className="font-semibold text-indigo-800 underline">เปิดหน้าสำหรับช่าง</Link></p><p className="mt-2 break-all text-sm text-slate-600">{url}</p></div></div></section>
+    <section id="inspection-qr" className="mx-auto max-w-7xl px-4 pb-8 sm:px-6"><div className="flex flex-wrap items-center gap-6 rounded-2xl border border-slate-200 bg-white p-5"><img width={150} height={150} src={qr} alt="QR เปิดหน้าตรวจสำหรับช่าง" /><div><h2 className="font-bold">QR เดียวสำหรับทีมหน้างาน</h2><p className="my-2">สแกนเพื่อเปิดหน้าสำหรับช่าง มีเพียงสองเมนูตรวจ</p><a className="text-violet-700 underline" href={qr} download="smart-fleet-inspection.png">ดาวน์โหลด QR สำหรับพิมพ์</a><p className="mt-2 text-sm"><Link href="/inspection/field" className="font-semibold text-indigo-800 underline">เปิดหน้าสำหรับช่าง</Link></p></div></div></section>
   </div>;
 }

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Icon from './inspection-icon';
 import { InspectionSkeleton, Spinner } from './loading-ui';
 import { useEffect, useState, type FormEvent } from 'react';
-import { jobVehicleChecks, thaiInspectionDay, toolChecks, vehicleChecks, workerChecks, type InspectionKind, type VehicleCategory } from '@/lib/inspection';
+import { inspectionCategoryLabel, jobVehicleChecks, thaiInspectionDay, toolChecks, vehicleChecks, workerChecks, type InspectionKind, type VehicleCategory } from '@/lib/inspection';
 import { preparePhoto } from '@/lib/prepare-photo';
 
 type Option = { id: string; label: string; category?: VehicleCategory };
@@ -104,7 +104,7 @@ export default function InspectionForm({ kind, fromField = false }: { kind: Insp
     setBusy(true);
     try {
       const image = photo ? await preparePhoto(photo) : null;
-      const payload = { kind, date: date || thaiInspectionDay(), id, vehicleId: vehicle.id, inspectorId: inspector.id, supervisorId: supervisor?.id,
+      const payload = { kind, category, date: date || thaiInspectionDay(), id, vehicleId: vehicle.id, inspectorId: inspector.id, supervisorId: supervisor?.id,
         mileage, items, people, tools, tasks, vehicleChecks: checks, male: counts[0], female: counts[1], absent: counts[2],
         carReady: ready === 'yes', carReason: reason, carAction: action, toolAction, photo: image, note };
       const r = await fetch('/api/inspection', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -131,7 +131,7 @@ export default function InspectionForm({ kind, fromField = false }: { kind: Insp
         {vehicleOnly ? <section className={boxClass}>
           <label className="block font-semibold">เลขไมล์ (กม.)<input required type="number" min="0" step="1" className={inputClass} value={mileage} onChange={e => setMileage(e.target.value)} /></label>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 text-lg font-bold"><Icon name="list" /> เช็กลิสต์ · {category}</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold"><Icon name="list" /> เช็กลิสต์ · {inspectionCategoryLabel[category]}</h2>
             <span aria-live="polite" className="rounded-full bg-violet-50 px-3 py-1 text-sm font-bold text-violet-800">{items.filter(x => x.status).length} / {vehicleChecks[category].length} ข้อ</span>
           </div>
           {category === 'รถยนต์' && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-teal-200 bg-teal-50 p-4">

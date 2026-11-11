@@ -22,7 +22,7 @@ function AnswerValue({ value }: { value: unknown }) {
   }
   return <span>{typeof value === 'boolean' ? (value ? 'ใช่' : 'ไม่ใช่') : value === 'pass' ? 'ผ่าน' : value === 'fail' ? 'ไม่ผ่าน' : String(value ?? '—')}</span>;
 }
-export default function Dashboard({ embedded = false }: { embedded?: boolean }) {
+export default function Dashboard({ embedded = false, adminView = false }: { embedded?: boolean; adminView?: boolean }) {
   const [view, setView] = useState<'today'|'report'>(embedded ? 'today' : 'report');
   const [mode, setMode] = useState<'day'|'month'|'year'>('day');
   const [day, setDay] = useState('');
@@ -116,8 +116,8 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
     .filter(v => !fleetStatus || (fleetStatus === 'missing' ? !v.latest : fleetStatus === 'issues' ? v.latest && !v.latest.ready : v.latest?.ready));
   const showDetail = (row: InspectionRow) => { setSelected(row); setDetail(null); setPhoto(''); setDetailError(''); setDecisionNote(''); };
   const headers = { authorization: 'Bearer ' + key, 'x-inspection-employee': employee };
-  async function openDetail(e: FormEvent) {
-    e.preventDefault(); if (!selected) return;
+  async function openDetail(e?: FormEvent) {
+    e?.preventDefault(); if (!selected) return;
     setBusy(true); setDetailError(''); setDetail(null); setPhoto('');
     try {
       const r = await fetch('/api/inspection?' + new URLSearchParams({ mode:'detail', id:selected.id }), { headers });
@@ -141,7 +141,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
     finally { setBusy(false); }
   }
   return <main className="mx-auto max-w-7xl space-y-5 px-4 py-6 text-slate-900 sm:px-6">
-    {!embedded && <Link className="font-semibold text-violet-700" href="/inspection">← Inspection</Link>}
+    {!embedded && <Link className="font-semibold text-violet-700" href={adminView ? "/admin" : "/inspection"}>← {adminView ? "ผู้ดูแลระบบ" : "Inspection"}</Link>}
     <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
       <p className="mb-2 px-1 text-xs font-bold text-slate-600">มุมมองแดชบอร์ด</p>
       <nav aria-label="มุมมองแดชบอร์ด" className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1.5">
@@ -224,7 +224,7 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
       {historyVehicle && <section id="inspection-vehicle-history" tabIndex={-1} className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5" aria-label="วันที่ตรวจรายคัน">
         <div className="flex items-center justify-between gap-3"><h2 className="font-bold">วันที่ตรวจ · {summary.eligible.find(v => v.id === historyVehicle)?.plate ?? 'รถที่เลือก'}</h2><button className="text-sm font-bold text-indigo-800 underline" onClick={() => setHistoryVehicle(null)}>ปิด</button></div>
         <p className="mt-1 text-sm text-slate-600">เลือกวันที่หรือครั้งที่ตรวจเพื่อเปิดรายละเอียด</p>
-        <ul className="mt-3 max-h-64 space-y-2 overflow-auto">{summary.all.filter(r => r.vehicleId === historyVehicle).map(r => <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white px-4 py-3"><span className="font-semibold">{r.date} · {new Date(r.createdAt).toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit'})} น. · {r.ready ? 'พร้อม' : 'พบปัญหา'}</span><button className="text-sm font-bold text-indigo-800 underline" onClick={() => showDetail(r)}>ดูรายละเอียด</button></li>)}</ul>
+        <ul className="mt-3 max-h-64 space-y-2 overflow-auto">{summary.all.filter(r => r.vehicleId === historyVehicle).map(r => <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white px-4 py-3"><span className="font-semibold">{r.date} · {new Date(r.createdAt).toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit'})} น. · {r.ready ? 'พร้อม' : 'พบปัญหา'}</span><button className="text-sm font-bold text-indigo-800 underline" onClick={() => showDetail(r)}>ดูรายละเอียด</button>{adminView && r.kind==='vehicle' && <Link href={'/admin/inspection/print/'+encodeURIComponent(r.id)} className="rounded-lg bg-indigo-100 px-3 py-2 text-sm font-bold text-indigo-900">พิมพ์ใบตรวจ</Link>}</li>)}</ul>
       </section>}
       <section className="space-y-2"><h2 className="flex items-center gap-2 text-xl font-bold"><Icon name="list" /> ประวัติ{kindLabel[kind]}</h2>{summary.all.filter(r => !result || r.ready === (result === 'ready')).map(r => <article key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
         <div><p className="font-bold">{r.plate} · {r.category}</p><p className="text-sm">{new Date(r.date+'T00:00:00+07:00').toLocaleDateString('th-TH',{timeZone:'Asia/Bangkok'})} · <span className={r.ready ? 'text-emerald-800' : 'text-red-800'}>{r.ready ? 'พร้อม' : 'พบปัญหา'}</span>{r.approval ? ' · '+status[r.approval] : ''}</p>{r.failures.length > 0 && <p className="text-sm text-red-800">{r.failures.join(' · ')}</p>}</div>
@@ -236,10 +236,11 @@ export default function Dashboard({ embedded = false }: { embedded?: boolean }) 
       <div className="max-h-[90vh] w-full max-w-xl space-y-4 overflow-auto rounded-2xl bg-white p-5">
         <div className="flex justify-between gap-3"><h2 className="text-xl font-bold">{selected.plate} · รายละเอียด</h2><button className="text-violet-800 underline" disabled={busy} onClick={() => {setSelected(null);setPhoto('');setKey('');}}>ปิด</button></div>
         <p>{selected.date} · {selected.ready ? 'พร้อม' : 'พบปัญหา'}{selected.approval ? ' · '+status[detail?.approval ?? selected.approval] : ''}</p>
+        {adminView && selected.kind === 'vehicle' && <Link href={'/admin/inspection/print/'+encodeURIComponent(selected.id)} className="inline-block rounded-xl bg-indigo-100 px-4 py-2 font-bold text-indigo-900">เปิดใบตรวจเพื่อพิมพ์</Link>}
         {!selected.ready && <Link href={'/report-issue?' + new URLSearchParams({ vehicleId:selected.vehicleId, issue:selected.failures.join(', ') })} className="inline-block font-bold text-red-800 underline">นำข้อบกพร่องไปกรอกใบแจ้งซ่อม</Link>}
         {detail ? <><p className="font-semibold">ผู้ตรวจ: {detail.inspector.name}</p><AnswerValue value={detail.answers} />{detail.note && <p>หมายเหตุ: {detail.note}</p>}{photo && <img src={photo} alt="รูปหลักฐานการตรวจ" className="max-h-96 rounded-xl object-contain" />}
           {detail.canApprove && detail.approval === 'pending' && <div className="space-y-2 border-t pt-3"><label>ข้อคิดเห็น / เหตุผล<input className={field} value={decisionNote} onChange={e => setDecisionNote(e.target.value)} /></label><div className="flex flex-wrap gap-3"><button disabled={busy || !detail.ready} className="rounded-xl bg-emerald-800 px-4 py-2 text-white disabled:opacity-50" onClick={() => decide('approved')}>อนุญาต</button><button disabled={busy || !decisionNote.trim()} className="rounded-xl bg-red-800 px-4 py-2 text-white disabled:opacity-50" onClick={() => decide('rejected')}>ไม่อนุญาต</button></div></div>}
-        </> : <form className="space-y-3" onSubmit={openDetail}><p className="text-sm">ผู้มีสิทธิ์เท่านั้นจึงจะดูชื่อผู้ตรวจ ข้อมูลรายข้อและรูปหลักฐานได้</p><label>รหัสพนักงาน<input className={field} required value={employee} onChange={e => setEmployee(e.target.value)} /></label><label>คีย์สิทธิ์ Inspection<input className={field} required type="password" value={key} onChange={e => setKey(e.target.value)} /></label><button disabled={busy} className="rounded-xl bg-violet-800 px-4 py-2 text-white disabled:opacity-50">{busy ? <span className="inline-flex items-center gap-2"><Spinner /> กำลังตรวจสอบ…</span> : 'เปิดผลตรวจฉบับเต็ม'}</button></form>}
+        </> : adminView ? <button type="button" disabled={busy} onClick={()=>openDetail()} className="rounded-xl bg-indigo-700 px-4 py-2 font-bold text-white">{busy ? 'กำลังโหลด…' : 'เปิดผลตรวจฉบับเต็ม'}</button> : <form className="space-y-3" onSubmit={openDetail}><p className="text-sm">ผู้มีสิทธิ์เท่านั้นจึงจะดูชื่อผู้ตรวจ ข้อมูลรายข้อและรูปหลักฐานได้</p><label>รหัสพนักงาน<input className={field} required value={employee} onChange={e => setEmployee(e.target.value)} /></label><label>คีย์สิทธิ์ Inspection<input className={field} required type="password" value={key} onChange={e => setKey(e.target.value)} /></label><button disabled={busy} className="rounded-xl bg-violet-800 px-4 py-2 text-white disabled:opacity-50">{busy ? <span className="inline-flex items-center gap-2"><Spinner /> กำลังตรวจสอบ…</span> : 'เปิดผลตรวจฉบับเต็ม'}</button></form>}
         {detailError && <p role="alert" className="text-red-800">{detailError}</p>}
       </div>
     </section>}

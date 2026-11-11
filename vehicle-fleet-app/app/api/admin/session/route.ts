@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminCookie, adminFromRequest, issueAdmin, loginAdmin } from '@/lib/admin-auth';
+import { adminCookie, adminFromRequest, issueAdmin, loginAdmin, previewMode } from '@/lib/admin-auth';
 const reply = (data:unknown,status=200) => NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}});
 export async function GET(request:Request) {
   const session=await adminFromRequest(request);
@@ -7,7 +7,11 @@ export async function GET(request:Request) {
 }
 export async function POST(request:Request) {
   try {
-    if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) return reply({error:'คำขอไม่ถูกต้อง'},403);
+    const origin = request.headers.get('origin');
+    const host = request.headers.get('host') ?? '';
+    // Next.js can normalize the internal URL to localhost while the browser uses 127.0.0.1.
+    const samePreviewOrigin = previewMode() && /^(?:localhost|127\.0\.0\.1):\d+$/.test(host) && origin === `http://${host}`;
+    if (origin && origin !== new URL(request.url).origin && !samePreviewOrigin) return reply({error:'คำขอไม่ถูกต้อง'},403);
     const body=await request.json();
     const auth=typeof body.id==='string'&&typeof body.password==='string' ? await loginAdmin(body.id.trim(),body.password) : null;
     if (!auth) return reply({error:'รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง'},401);

@@ -83,7 +83,6 @@ export default function AdminDashboard() {
           <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><span className="w-2 h-6 bg-purple-600 rounded-full"></span> เมนูจัดการข้อมูล (Management)</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
-            {role === 'super' && <Link href="/admin/accounts" className="block rounded-2xl border border-indigo-200 bg-indigo-50 p-6 font-bold text-indigo-950">จัดการบัญชีแอดมิน<span className="mt-1 block text-sm font-normal">เลือกพนักงานและตั้งรหัสผ่าน</span></Link>}
             <Link href="/admin/employees" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-purple-400 transition-all cursor-pointer group block">
               <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg></div>
               <h3 className="font-bold text-lg text-slate-800 mb-1">จัดการพนักงาน</h3>
@@ -108,13 +107,22 @@ export default function AdminDashboard() {
               <p className="text-slate-500 text-xs">ควบคุม Workflow ซ่อมบำรุงและปิดงาน</p>
             </Link>
 
-            {/* 🌟 2 เมนูใหม่ที่เพิ่มเข้ามา */}
             <Link href="/admin/fuel" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-cyan-400 transition-all cursor-pointer group block">
               <div className="w-12 h-12 bg-cyan-100 text-cyan-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
               <h3 className="font-bold text-lg text-slate-800 mb-1">เมนูค่าน้ำมัน</h3>
               <p className="text-slate-500 text-xs">บันทึกประวัติ และคำนวณค่าน้ำมัน</p>
             </Link>
             
+            <Link href="/admin/inspection" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-teal-400 transition-all group block">
+              <div className="w-12 h-12 bg-teal-100 text-teal-700 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><svg aria-hidden="true" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg></div>
+              <h3 className="font-bold text-lg text-slate-800 mb-1">Inspection สำหรับแอดมิน</h3>
+              <p className="text-slate-500 text-xs">ค้นทะเบียน ดูวันที่ตรวจ และพิมพ์ PDF</p>
+            </Link>
+            {role === 'super' && <Link href="/admin/accounts" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-400 transition-all group block">
+              <div className="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><svg aria-hidden="true" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4m-4 4v2"/></svg></div>
+              <h3 className="font-bold text-lg text-slate-800 mb-1">จัดการบัญชีแอดมิน</h3>
+              <p className="text-slate-500 text-xs">ค้นหาพนักงาน เปิดสิทธิ์ หรือตั้งรหัสใหม่</p>
+            </Link>}
             <Link href="/admin/settings" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:border-fuchsia-400 transition-all cursor-pointer group block">
               <div className="w-12 h-12 bg-fuchsia-100 text-fuchsia-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg></div>
               <h3 className="font-bold text-lg text-slate-800 mb-1">ตั้งค่าระบบแจ้งเตือน</h3>

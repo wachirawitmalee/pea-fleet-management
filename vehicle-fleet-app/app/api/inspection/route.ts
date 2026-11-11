@@ -1,6 +1,7 @@
+import { adminFromRequest } from '@/lib/admin-auth';
 import { branches as allowedBranches, fleetBranch } from '@/lib/fleet-branches';
 import { vehicleBranches } from '@/lib/vehicle-branches';
-import { inspectionVehicleIds } from '@/lib/inspection-enrollment';
+import { inspectionEnrollment } from '@/lib/inspection-enrollment';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { googleCall, GoogleStorageError } from '@/lib/storage/google';
@@ -51,12 +52,12 @@ export async function GET(request: Request) {
         return response(employees.filter(e => e.employeeId.includes(q) || inspectionSearch(e.fullName).includes(q)).sort((a,b) => a.fullName.localeCompare(b.fullName, 'th')).slice(0, q ? 12 : 6).map(e => ({ id: e.employeeId, label: e.fullName })));
       }
       const vehicles = await prisma.vehicle.findMany({ select: { vehicleId: true, plateNumber: true, brand: true, type: true } });
-      const enrolled = await inspectionVehicleIds();
-      return response(vehicles.filter(v => enrolled.has(v.vehicleId) && inspectionSearch(v.plateNumber + ' ' + v.brand).includes(q)).sort((a,b) => a.plateNumber.localeCompare(b.plateNumber, 'th')).slice(0, q ? 12 : 6).map(v => ({ id: v.vehicleId, label: v.plateNumber + ' · ' + v.brand, category: categoryFor(v.type) })));
+      const enrolled = await inspectionEnrollment();
+      return response(vehicles.filter(v => enrolled.has(v.vehicleId) && inspectionSearch(v.plateNumber + ' ' + v.brand).includes(q)).sort((a,b) => a.plateNumber.localeCompare(b.plateNumber, 'th')).slice(0, q ? 12 : 6).map(v => ({ id: v.vehicleId, label: v.plateNumber + ' · ' + v.brand, category: enrolled.get(v.vehicleId) ?? categoryFor(v.type) })));
     }
     if (mode === 'photo' || mode === 'detail') {
       const user = await actor(request);
-      if (!user || !['manager','approver'].includes(user.role)) return error('กรุณายืนยันสิทธิ์ดูผลตรวจ', 401);
+      if ((!user || !['manager','approver'].includes(user.role)) && !await adminFromRequest(request)) return error('กรุณายืนยันสิทธิ์ดูผลตรวจ', 401);
       const id = params.get('id');
       if (!id || !idFormat.test(id)) return error('รหัสรายการไม่ถูกต้อง');
       if (mode === 'photo') {
@@ -67,18 +68,18 @@ export async function GET(request: Request) {
       const record = await googleCall<InspectionDetail | null>('inspection-detail', { id });
       if (!record) return error('ไม่พบรายการตรวจ', 404);
       const { photoId, ...detail } = record;
-      return response({ ...detail, hasPhoto: !!photoId, canApprove: user.role === 'approver' && user.employeeId !== record.inspector.id });
+      return response({ ...detail, hasPhoto: !!photoId, canApprove: user?.role === 'approver' && user.employeeId !== record.inspector.id });
     }
     const period = params.get('period');
     if (!period || !/^\d{4}(?:-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?)?$/.test(period)) return error('เลือกวัน เดือน หรือปีที่ต้องการดู');
-    const enrolled = await inspectionVehicleIds();
+    const enrolled = await inspectionEnrollment();
     if (mode === 'ranking') {
       const kind = params.get('kind');
       if (kind !== 'vehicle' && kind !== 'pre-job') return error('เลือกประเภทการตรวจ');
       const branch = params.get('branch');
       if (branch && !allowedBranches.some(value=>value===branch)) return error('สาขาไม่ถูกต้อง');
       const assigned = branch ? await vehicleBranches() : null;
-      const vehicleIds = [...enrolled].filter(id=>!branch || fleetBranch(assigned?.get(id))===branch);
+      const vehicleIds = [...enrolled.keys()].filter(id=>!branch || fleetBranch(assigned?.get(id))===branch);
       if (!vehicleIds.length) return response([]);
       const ranking = await googleCall<{ name: string; count: number }[]>('inspection-ranking', { period, kind, vehicleIds });
       return response(ranking.map(({name,count})=>({name,count})).sort((a,b)=>b.count-a.count));
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
       prisma.vehicle.findMany({ select: { vehicleId: true, plateNumber: true, type: true } }),
       vehicleBranches(),
     ]);
-    return response({ rows: rows.filter(r => enrolled.has(r.vehicleId)), vehicles: vehicles.filter(v => enrolled.has(v.vehicleId)).map(v => ({ id: v.vehicleId, plate: v.plateNumber, branch: fleetBranch(branches.get(v.vehicleId)), category: categoryFor(v.type) })) });
+    return response({ rows: rows.filter(r => enrolled.has(r.vehicleId)), vehicles: vehicles.filter(v => enrolled.has(v.vehicleId)).map(v => ({ id: v.vehicleId, plate: v.plateNumber, branch: fleetBranch(branches.get(v.vehicleId)), category: enrolled.get(v.vehicleId) ?? categoryFor(v.type) })) });
   } catch (e) { return failed(e); }
 }
 
@@ -115,13 +116,15 @@ export async function POST(request: Request) {
       prisma.employee.findUnique({ where: { employeeId: clean(b.inspectorId, 100) }, select: employeeSelect }),
     ]);
     if (!vehicle || inspector?.status !== 'ACTIVE') return error('กรุณาเลือกรถและผู้ตรวจจากข้อมูลระบบ');
-    if (!(await inspectionVehicleIds()).has(vehicle.vehicleId)) return error('รถคันนี้ไม่ได้เข้าร่วม Inspection', 409);
-    const category = categoryFor(vehicle.type);
+    const enrollment = await inspectionEnrollment();
+    if (!enrollment.has(vehicle.vehicleId)) return error('รถคันนี้ไม่ได้เข้าร่วม Inspection', 409);
+    const category = enrollment.get(vehicle.vehicleId) ?? categoryFor(vehicle.type);
     const photo = b.photo || null;
     if (photo && (typeof photo !== 'string' || photo.length > 3000000 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(photo))) return error('ไฟล์ภาพไม่ถูกต้อง');
     const note = clean(b.note);
     let failures: string[], answers: unknown, ready: boolean;
     if (kind === 'vehicle') {
+      if (b.category !== category) return error('แบบตรวจรถเปลี่ยนแล้ว กรุณาเลือกรถใหม่', 409);
       const items = checks(b.items, vehicleChecks[category]), mileage = parseMileage(b.mileage);
       if (!items || mileage === null) return error('ระบุเลขไมล์และผลตรวจทุกข้อ พร้อมสาเหตุของข้อผิดปกติ');
       if (category !== 'โฟล์คลิฟท์' && !photo) return error('กรุณาแนบภาพหลักฐาน');

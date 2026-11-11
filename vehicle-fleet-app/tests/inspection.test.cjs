@@ -6,9 +6,11 @@ test('Inspection starts empty, preserves evidence and accepts only a separate ap
   let rows = [], sheetExists = false, createdFiles = 0;
   const sheet = {
     getLastRow: () => rows.length,
+    getMaxRows: () => 1000,
     getRange: (row, col, n) => typeof row === 'string' ? { setNumberFormat() {} } : ({
       getValues: () => rows.slice(row-1, row-1+n),
-      setValues: value => { rows = value; },
+      setValues: value => { rows.splice(row - 1, value.length, ...value); },
+      setNumberFormat() {},
       setValue: value => { rows[row-1][col-1] = value; },
     }),
     setFrozenRows() {}, appendRow: row => rows.push(row),
@@ -28,6 +30,8 @@ test('Inspection starts empty, preserves evidence and accepts only a separate ap
   assert.equal(run('save',{record,photo:'data:image/jpeg;base64,AA=='}).data.approval,'pending');
   run('save',{record,photo:'data:image/jpeg;base64,AA=='});
   assert.equal(createdFiles,1);assert.equal(rows.length,2);
+  assert.equal(rows[1][1], '2026-11-11');
+  rows[1][1] = 46337; // Existing Sheets date cells may be stored as serial numbers.
   assert.equal(run('summary',{period:'2026-10'}).data.length,0);
   const summary=run('summary',{period:'2026-11-11'}).data[0];
   assert.equal(summary.plate,'TEST');assert.equal(summary.photoId,undefined);assert.equal(summary.inspector,undefined);assert.equal(summary.answers,undefined);

@@ -16,8 +16,7 @@ function inspection_(input, properties) {
     if (action === 'inspection-ranking') {
       const vehicles = new Set(input.vehicleIds);
       const counts = new Map();
-      rows.filter(row => String(row[1]).startsWith(input.period)).forEach(row => {
-        const x = JSON.parse(row[2]);
+      rows.map(row => JSON.parse(row[2])).filter(x => x.date.startsWith(input.period)).forEach(x => {
         if (x.kind !== input.kind || !vehicles.has(x.vehicleId) || !x.inspector || !x.inspector.id) return;
         const entry = counts.get(x.inspector.id) || { name: x.inspector.name, count: 0 };
         entry.count++;
@@ -26,8 +25,7 @@ function inspection_(input, properties) {
       return result(Array.from(counts.values()));
     }
     if (action === 'inspection-summary') {
-      return result(rows.filter(row => String(row[1]).startsWith(input.period)).map(row => {
-        const x = JSON.parse(row[2]);
+      return result(rows.map(row => JSON.parse(row[2])).filter(x => x.date.startsWith(input.period)).map(x => {
         return { id: x.id, kind: x.kind, date: x.date, vehicleId: x.vehicleId, plate: x.plate, category: x.category,
           createdAt: x.createdAt, ready: x.ready, failures: x.failures, approval: x.approval };
       }));
@@ -74,7 +72,10 @@ function inspection_(input, properties) {
       const file = files.hasNext() ? files.next() : folder.createFile(Utilities.newBlob(Utilities.base64Decode(match[3]), match[1], name));
       x.photoId = file.getId();
     }
-    sheet.appendRow([x.id, x.date, JSON.stringify(x)]);
+    const row = sheet.getLastRow() + 1;
+    if (row > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 1);
+    sheet.getRange(row, 2).setNumberFormat('@');
+    sheet.getRange(row, 1, 1, 3).setValues([[x.id, x.date, JSON.stringify(x)]]);
     SpreadsheetApp.flush();
     return result(ack(x));
   } finally { if (write) lock.releaseLock(); }

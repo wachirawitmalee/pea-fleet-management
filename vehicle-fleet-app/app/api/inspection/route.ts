@@ -51,8 +51,10 @@ export async function GET(request: Request) {
         const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE' }, select: { employeeId: true, fullName: true } });
         return response(employees.filter(e => e.employeeId.includes(q) || inspectionSearch(e.fullName).includes(q)).sort((a,b) => a.fullName.localeCompare(b.fullName, 'th')).slice(0, q ? 12 : 6).map(e => ({ id: e.employeeId, label: e.fullName })));
       }
-      const vehicles = await prisma.vehicle.findMany({ select: { vehicleId: true, plateNumber: true, brand: true, type: true } });
-      const enrolled = await inspectionEnrollment();
+      const [vehicles, enrolled] = await Promise.all([
+        prisma.vehicle.findMany({ select: { vehicleId: true, plateNumber: true, brand: true, type: true } }),
+        inspectionEnrollment(),
+      ]);
       return response(vehicles.filter(v => enrolled.has(v.vehicleId) && inspectionSearch(v.plateNumber + ' ' + v.brand).includes(q)).sort((a,b) => a.plateNumber.localeCompare(b.plateNumber, 'th')).slice(0, q ? 12 : 6).map(v => ({ id: v.vehicleId, label: v.plateNumber + ' · ' + v.brand, category: enrolled.get(v.vehicleId) ?? categoryFor(v.type) })));
     }
     if (mode === 'photo' || mode === 'detail') {
@@ -111,12 +113,13 @@ export async function POST(request: Request) {
     }
     const { kind, date, id } = b;
     if (!['vehicle','pre-job'].includes(kind) || !inspectionDayValid(date) || typeof id !== 'string' || !/^[0-9a-f-]{36}$/.test(id)) return error('ประเภทหรือวันที่ตรวจไม่ถูกต้อง');
-    const [vehicle, inspector] = await Promise.all([
+    const [vehicle, inspector, enrollment, supervisor] = await Promise.all([
       prisma.vehicle.findUnique({ where: { vehicleId: clean(b.vehicleId, 100) } }),
       prisma.employee.findUnique({ where: { employeeId: clean(b.inspectorId, 100) }, select: employeeSelect }),
+      inspectionEnrollment(),
+      kind === 'pre-job' ? prisma.employee.findUnique({ where: { employeeId: clean(b.supervisorId, 100) }, select: employeeSelect }) : null,
     ]);
     if (!vehicle || inspector?.status !== 'ACTIVE') return error('กรุณาเลือกรถและผู้ตรวจจากข้อมูลระบบ');
-    const enrollment = await inspectionEnrollment();
     if (!enrollment.has(vehicle.vehicleId)) return error('รถคันนี้ไม่ได้เข้าร่วม Inspection', 409);
     const category = enrollment.get(vehicle.vehicleId) ?? categoryFor(vehicle.type);
     const photo = b.photo || null;
@@ -133,7 +136,6 @@ export async function POST(request: Request) {
       ready = failures.length === 0;
       answers = { items, mileage };
     } else {
-      const supervisor = await prisma.employee.findUnique({ where: { employeeId: clean(b.supervisorId, 100) }, select: employeeSelect });
       const tasks = [clean(b.tasks?.[0]), clean(b.tasks?.[1]), clean(b.tasks?.[2])].filter(Boolean);
       const people = checks(b.people, workerChecks), tools = checks(b.tools, toolChecks);
       const counts = [b.male, b.female, b.absent];
@@ -153,6 +155,7 @@ export async function POST(request: Request) {
       ready, failures, answers, note, approval: kind === 'pre-job' ? 'pending' : null,
     };
     const saved = await googleCall<{ id: string; ready: boolean; approval: InspectionRow['approval'] }>('inspection-save', { record, photo });
+    if (saved?.id !== id) return error('ยังไม่ได้รับการยืนยันจากระบบจัดเก็บ กรุณากดบันทึกอีกครั้ง', 503);
     return response(saved, 201);
   } catch (e) { return failed(e); }
 }
